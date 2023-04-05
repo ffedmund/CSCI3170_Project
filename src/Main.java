@@ -1,7 +1,9 @@
 // cmd: java -cp .\mysql-connector-j-8.0.32\mysql-connector-j-8.0.32.jar;. Main
 import java.time.LocalDate;
 import java.util.Scanner;
+import java.util.HashMap;
 import java.io.Console;
+import java.io.EOFException;
 import java.sql.*;
 
 public class Main {
@@ -9,6 +11,7 @@ public class Main {
     static boolean connected = false;
     static Connection conn = null;
     static String host, dbname, username, password;
+    static final String[] tableName = {"Book", "Customer", "Ordering", "Cart", "Package"};
     static final String[][] content = {
         // page 0 (main menu)
         {"===== Welcome to Book Ordering Management System =====",  // Title
@@ -54,8 +57,32 @@ public class Main {
         System.out.println("\n + System Date: " + LocalDate.now());
         System.out.print(" + Database Records: ");
         if(connected){
-            // TODO: count record number
-            System.out.println("...");
+            for(int i = 0; i<3; i++){
+                int count = -1;
+                try{
+                    Statement stmt = conn.createStatement();
+                    ResultSet rs = stmt.executeQuery("SELECT COUNT(*) FROM " + tableName[i]);
+                    rs.next();
+                    count = rs.getInt(1);
+                }catch(Exception x){
+                    System.out.print("Error:'" + tableName[i] + "'");
+                }
+                if(count != -1){
+                    switch(i){
+                        case 0:
+                            System.out.print("Books (");
+                            break;
+                        case 1:
+                            System.out.print("Customers (");
+                            break;
+                        case 2:
+                            System.out.print("Orders (");
+                            break;
+                    }
+                    System.out.print(count + ")" + (i<2?", ":" "));
+                }
+            }
+            System.out.println();
         }else{
             System.out.println("--Fail to Connect to Database--");
         }
@@ -114,7 +141,7 @@ public class Main {
             return;
         }
 
-        // try "use dbname" to switch database
+        // try to switch database
         try{
             conn.setCatalog(dbname);
         }catch(Exception x){
@@ -130,12 +157,93 @@ public class Main {
             }
         }
 
-        //TODO: try create table
+        HashMap<String, String> tableStruct = new HashMap<String, String>();
+        tableStruct.put("Book", "(ISBN VARCHAR(255) not NULL, " +   //TODO: change to correct schema
+                                " Title VARCHAR(255), " + 
+                                " Authors VARCHAR(255), " + 
+                                " Price INTEGER, " + 
+                                " InventoryQuantity INTEGER, " +
+                                " PRIMARY KEY ( ISBN ))");
+        tableStruct.put("Customer", "(ISBN VARCHAR(255) not NULL, " +   //TODO: change to correct schema
+                                    " first VARCHAR(255), " + 
+                                    " last VARCHAR(255), " + 
+                                    " age INTEGER, " + 
+                                    " PRIMARY KEY ( ISBN ))");
+        tableStruct.put("Ordering", "(ISBN VARCHAR(255) not NULL, " +   //TODO: change to correct schema
+                                    " first VARCHAR(255), " + 
+                                    " last VARCHAR(255), " + 
+                                    " age INTEGER, " + 
+                                    " PRIMARY KEY ( ISBN ))");
+        tableStruct.put("Cart", "(ISBN VARCHAR(255) not NULL, " +   //TODO: change to correct schema
+                                " first VARCHAR(255), " + 
+                                " last VARCHAR(255), " + 
+                                " age INTEGER, " + 
+                                " PRIMARY KEY ( ISBN ))");
+        tableStruct.put("Package", "(ISBN VARCHAR(255) not NULL, " +   //TODO: change to correct schema
+                                    " first VARCHAR(255), " + 
+                                    " last VARCHAR(255), " + 
+                                    " age INTEGER, " + 
+                                    " PRIMARY KEY ( ISBN ))");
+        
+        String newName;
+        boolean newNameOK;
+        int failcount = 0;
+        do{
+            newNameOK = true;
+            newName = "temp";
+            for(int i = 0; i<40; i++)
+                newName += (char)('A' + Math.random() * 26);
+            try{
+                Statement stmt = conn.createStatement();
+                stmt.executeUpdate("CREATE TABLE " + newName + " (c char)");
+                stmt.executeUpdate("DROP TABLE " + newName);
+            }catch(Exception x){
+                newNameOK = false;
+                failcount++;
+            }   
+            if(failcount > 1000000){
+                System.err.println("\nError: Please try another database");
+                System.err.println("(Press Enter to continue)");
+                myScanner.nextLine();
+                return;
+            }
+        }while(!newNameOK);
+        
+        // check if the table exist, exist->Exception x->check if the schema correct, not exist->create table book
+        for(String tname: tableName){
+            try{
+                Statement stmt = conn.createStatement();
+                stmt.executeUpdate("CREATE TABLE " + tname + " " + tableStruct.get(tname));
+            }catch(Exception x){    // table exist: check schema
+                try{
+                    Statement stmt = conn.createStatement();
+                    stmt.executeUpdate("CREATE TABLE " + newName + " " + tableStruct.get(tname));
+                    Statement stmt2 = conn.createStatement();
+                    /* TODO: del reference?
+                    * Comparison Query modify from:
+                    * https://dba.stackexchange.com/questions/75532/query-to-compare-the-structure-of-two-tables-in-mysql
+                    */
+                    ResultSet rs = stmt2.executeQuery("SELECT COUNT(1) FROM " + 
+                                                        "(SELECT column_name,ordinal_position,data_type,column_type,COUNT(1) rowcount " +
+                                                        "FROM information_schema.columns " + 
+                                                        "WHERE table_schema=DATABASE() AND table_name IN ('" + tname + "','" + newName + "') " +
+                                                        "GROUP BY column_name,ordinal_position,data_type,column_type "+
+                                                        "HAVING COUNT(1)=1) A");
+                    stmt.executeUpdate("DROP TABLE " + newName);
+                    rs.next();
+                    if(rs.getInt(1)>0)
+                        throw new Exception();
+                }catch(Exception y){
+                    System.err.println("\nError: Existing table not match");
+                    System.err.println("Please try another database or delete the existing table '" + tname + "'");
+                    System.err.println("(Press Enter to continue)");
+                    myScanner.nextLine();
+                    return;
+                }
+            }
+        }
 
-        System.out.println("");
-        myScanner.nextLine();
-
-        //TODO
+        connected = true;
     }
 
     public static void main(String[] args){
@@ -183,7 +291,6 @@ public class Main {
                 case 1: // page 1 (Database Initialization)
                     switch(input){
                         case 1: // Login to Database and Create Missing Tables
-                            // TODO
                             connectDatabase();
                             break;
                         case 2: // Load from File
