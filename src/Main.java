@@ -3,7 +3,6 @@ import java.time.LocalDate;
 import java.util.Scanner;
 import java.util.HashMap;
 import java.io.Console;
-import java.io.EOFException;
 import java.sql.*;
 
 public class Main {
