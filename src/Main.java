@@ -12,7 +12,7 @@ public class Main {
     static boolean connected = false;
     static Connection conn = null;
     static String host, dbname, username, password;
-    static final String[] tableName = {"Book", "Customer", "Ordering", "Cart", "Package"};
+    static final String[] tableName = {"Book", "Customer", "Ordering"};
     static final String[][] content = {
         // page 0 (main menu)
         {"===== Welcome to Book Ordering Management System =====",  // Title
@@ -159,32 +159,26 @@ public class Main {
         }
 
         HashMap<String, String> tableStruct = new HashMap<String, String>();
-        tableStruct.put("Book", "(ISBN VARCHAR(255) not NULL, " +   //TODO: change to correct schema
-                                    " Title VARCHAR(255), " + 
-                                    " Authors VARCHAR(255), " + 
+        tableStruct.put("Book", "(ISBN CHAR(13) not NULL, " +   //TODO: change to correct schema
+                                    " Title VARCHAR(100), " + 
+                                    " Authors VARCHAR(50), " + 
                                     " Price INTEGER, " + 
                                     " InventoryQuantity INTEGER, " +
-                                    " PRIMARY KEY ( ISBN ))");
-        tableStruct.put("Customer", "(ISBN VARCHAR(255) not NULL, " +   //TODO: change to correct schema
-                                        " first VARCHAR(255), " + 
-                                        " last VARCHAR(255), " + 
+                                    " PRIMARY KEY (ISBN))");
+        tableStruct.put("Customer", "(UID CHAR(10) not NULL, " +   //TODO: change to correct schema
+                                        " Name VARCHAR(50), " + 
+                                        " Address VARCHAR(200), " + 
                                         " age INTEGER, " + 
-                                        " PRIMARY KEY ( ISBN ))");
-        tableStruct.put("Ordering", "(ISBN VARCHAR(255) not NULL, " +   //TODO: change to correct schema
-                                        " first VARCHAR(255), " + 
-                                        " last VARCHAR(255), " + 
-                                        " age INTEGER, " + 
-                                        " PRIMARY KEY ( ISBN ))");
-        tableStruct.put("Cart", "(ISBN VARCHAR(255) not NULL, " +   //TODO: change to correct schema
-                                    " first VARCHAR(255), " + 
-                                    " last VARCHAR(255), " + 
-                                    " age INTEGER, " + 
-                                    " PRIMARY KEY ( ISBN ))");
-        tableStruct.put("Package", "(ISBN VARCHAR(255) not NULL, " +   //TODO: change to correct schema
-                                       " first VARCHAR(255), " + 
-                                       " last VARCHAR(255), " + 
-                                       " age INTEGER, " + 
-                                       " PRIMARY KEY ( ISBN ))");
+                                        " PRIMARY KEY (UID))");
+        tableStruct.put("Ordering", "(OID CHAR(8) not NULL, " +   //TODO: change to correct schema
+                                        " UID CHAR(10) not NULL, " +
+                                        " OrderISBN CHAR(13) NOT NULL, " + 
+                                        " OrderDate DATE, " + 
+                                        " OrderQuantity INTEGER, " + 
+                                        " ShippingStatus VARCHAR(8), " + 
+                                        " PRIMARY KEY (OID, OrderISBN), " + 
+                                        " FOREIGN KEY (UID) REFERENCES Customer(UID), " + 
+                                        " FOREIGN KEY (OrderISBN) REFERENCES Book(ISBN))");
         
         String newName;
         boolean newNameOK;
@@ -220,7 +214,7 @@ public class Main {
                     Statement stmt = conn.createStatement();
                     stmt.executeUpdate("CREATE TABLE " + newName + " " + tableStruct.get(tname));
                     Statement stmt2 = conn.createStatement();
-                    /* TODO: del reference?
+                    /* TODO: reference?
                     * Comparison Query modify from:
                     * https://dba.stackexchange.com/questions/75532/query-to-compare-the-structure-of-two-tables-in-mysql
                     */
