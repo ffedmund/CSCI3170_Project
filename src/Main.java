@@ -238,8 +238,8 @@ public class Main {
     // try{
     //     Statement stmt = conn.createStatement();
     //     ResultSet rs = stmt.executeQuery("SELECT * FROM Book");
-    //     int[] colW = {4,7,4,2};
-    //     showRs(rs, "tututu title test", colW);
+    //     int[] colW = {};
+    //     showRs(rs, "book test", colW);
     // }catch(Exception e){
     //     e.printStackTrace();
     //     System.err.println(e);
@@ -307,7 +307,7 @@ public class Main {
                 maxPage++;
             int input = 0;
 
-            while(input != 4){
+            while(input != 3){
                 Scanner myScanner = new Scanner(System.in);
                 clrscr();
                 System.out.printf("%" + ((80-tiltle.length())/2>0?(80-tiltle.length())/2:0) + "s%s\n", "", tiltle);
@@ -459,6 +459,7 @@ public class Main {
     public static void main(String[] args){
         int page = 0;
         int error = 0;
+        connectDatabase();
         while(page != 4){
             showMenu(page);
 
@@ -583,7 +584,6 @@ public class Main {
                             // TODO
                             break;
                         case 3: // Check History Orders
-                            // TODO
                             clrscr();
                             if(!connected){
                                 showMessage("Fail to Connect to Database");
@@ -592,15 +592,15 @@ public class Main {
                             System.out.println("Checking History Orders\n");
                             String uid;
                             Scanner myScanner3 = new Scanner(System.in);
-                            System.out.print("Please enter your UID:");
+                            System.out.print("Please enter your UID: ");
                             uid = myScanner3.nextLine();
                             try{
                                 Statement stmt = conn.createStatement();
                                 ResultSet rs = stmt.executeQuery(
-                                    "SELECT Ordering.oid AS 'OID', Ordering.OrderDate AS 'Date', Ordering.OrderISBN AS 'ISBN', Ordering.OrderQuantity AS 'Quantity', Ordering.ShippingStatus AS 'Status' " + 
+                                    "SELECT Ordering.OrderDate AS 'Date', Ordering.oid AS 'OID', Ordering.OrderISBN AS 'ISBN', Ordering.OrderQuantity AS 'Quantity', Ordering.ShippingStatus AS 'Status' " + 
                                     "FROM Ordering " + 
                                     "WHERE uid = '" + uid + "' " + 
-                                    "ORDER BY Ordering.oid DESC;");
+                                    "ORDER BY Ordering.OrderDate DESC;");
                                 int[] colW = {10, 12, 15, 10, 10};
                                 int r = showRs(rs, "History Orders for UID: " + uid, colW);
                                 if(r==2)
@@ -626,6 +626,119 @@ public class Main {
                     switch(input){
                         case 1: // Order Update
                             // TODO
+                            clrscr();
+                            if(!connected){
+                                showMessage("Fail to Connect to Database");
+                                continue;
+                            }
+                            System.out.println("Order Updating\n");
+                            // System.out.println("Orders in shipping status:");
+                            // System.out.println("> 1. ordered");
+                            // System.out.println("> 2. shipped");
+                            // System.out.println("> 3. received\n");
+                            System.out.println("Please enter the OID and the Order ISBN:");
+                            System.out.println("(Leave ISBN empty to change all status in the order)");
+                            Scanner myScanner2 = new Scanner(System.in);
+                            String oid, isbn;
+                            System.out.print("OID: ");
+                            oid = myScanner2.nextLine();
+                            System.out.print("ISBN: ");
+                            isbn = myScanner2.nextLine();
+                            try{
+                                if(oid.equals("")){
+                                    throw new Exception("\nOID cannot be empty");
+                                }
+                                Statement stmt = conn.createStatement();
+                                ResultSet rs = stmt.executeQuery(
+                                    "SELECT *  " + 
+                                    "FROM Ordering " + 
+                                    "WHERE oid = '" + oid + "' ");
+                                if(!rs.next()){
+                                    throw new Exception("\nOID " + oid + " not found");
+                                }
+                                if(!isbn.equals("")){   // (one record only)
+                                    rs = stmt.executeQuery(
+                                        "SELECT * " + 
+                                        "FROM Ordering " + 
+                                        "WHERE oid = '" + oid + "' AND orderIsbn = '" + isbn + "' ");
+                                    if(!rs.next()){
+                                        throw new Exception("\nBook isbn: " + isbn + " not found in OID: " + oid);
+                                    }
+                                }else{
+                                    rs = stmt.executeQuery(
+                                        "SELECT COUNT(DISTINCT ShippingStatus) AS Num " + 
+                                        "FROM Ordering " + 
+                                        "WHERE oid = '" + oid + "' ");
+                                    rs.next();
+                                    if(rs.getInt("Num") > 1){
+                                        System.out.println("\nThere are more than one status in OID: " + oid);
+                                        System.out.println("Update failed. Show records? (Enter y|Y for Yes, any others for No)");
+                                        Scanner myScanner3 = new Scanner(System.in);
+                                        String in = myScanner3.nextLine();
+                                        if(in.equals("Y")||in.equals("y")){
+                                            rs = stmt.executeQuery(
+                                                "SELECT OrderISBN AS ISBN, OrderQuantity AS Quantity, ShippingStatus AS Status " + 
+                                                "FROM Ordering " + 
+                                                "WHERE oid = '" + oid + "' ");
+                                            int[] colW = {15, 10, 10};
+                                            int r = showRs(rs, "Status in OID = " + oid, colW);
+                                            if(r==2)
+                                                page = 0;
+                                            if(r==3)
+                                                page = 4; 
+                                        }
+                                        throw new Exception("");
+                                    }
+                                }
+                                rs = stmt.executeQuery(
+                                        "SELECT ShippingStatus AS status " + 
+                                        "FROM Ordering " + 
+                                        "WHERE oid = '" + oid + "' " + 
+                                        (isbn.equals("")?"":("AND orderIsbn = '" + isbn + "' ")));
+                                rs.next();
+                                String cStatus = rs.getString("status");
+                                System.out.println("\nCurrent status: '" + cStatus + "'");
+                                ArrayList<String> options = new ArrayList<String>();
+                                switch(cStatus){
+                                    case "ordered":
+                                        options.add("shipped");
+                                    case "shipped":
+                                        options.add("received");
+                                        options.add("Cancel (Not updating)");
+                                        break;
+                                    default:    // cannot update "recieved"
+                                        throw new Exception("\nUpdate of current status '" + cStatus + "' is not supported");
+                                }
+                                System.out.println("Update to: ");
+                                for (int i = 0; i < options.size(); i++) {
+                                    System.out.println("> " + (i+1) + ". " + (i<options.size()-1?"'":"")  + options.get(i) + (i<options.size()-1?"'":""));
+                                }
+                                System.out.print("\n>>> Please Enter Your Option: ");
+                                Scanner myScanner3 = new Scanner(System.in);
+                                int input2 = -1;
+                                try{
+                                    input2 = myScanner3.nextInt();
+                                    input2--;
+                                    if(options.get(input2).equals("Cancel (Not updating)"))
+                                        throw new Exception("");
+                                    cStatus = options.get(input2);
+                                }catch(Exception x){
+                                    if(x.getMessage().equals(""))
+                                        throw new Exception("");
+                                    else
+                                        throw new Exception("\nUnknow input. Cancelling (No updates)");
+                                }
+                                stmt.executeUpdate("UPDATE Ordering " + 
+                                                    "SET ShippingStatus = '" + cStatus + "' " + 
+                                                    "WHERE OID = '" + oid + "' " + 
+                                                    (isbn.equals("")?"":("AND orderIsbn = '" + isbn + "' ")));
+                                throw new Exception("\nStatus updated");
+                                // SELECT COUNT(DISTINCT ShippingStatus) AS NumStatus
+                                // FROM Ordering;
+                            }catch(Exception e){
+                                if(!e.getMessage().equals(""))
+                                    showMessage(e.getMessage());
+                            }
                             break;
                         case 2: // Order Query
                             clrscr();
@@ -638,12 +751,12 @@ public class Main {
                             System.out.println("> 1. ordered");
                             System.out.println("> 2. shipped");
                             System.out.println("> 3. received\n");
-                            Scanner myScanner2 = new Scanner(System.in);
+                            Scanner myScanner3 = new Scanner(System.in);
                             System.out.print(">>> Please Enter Your Query: ");
                             int input2 = -1;
                             String status;
                             try{
-                                input2 = myScanner2.nextInt();
+                                input2 = myScanner3.nextInt();
                                 switch(input2){
                                     case 1:
                                         status = "ordered";
