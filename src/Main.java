@@ -11,8 +11,29 @@ public class Main {
     // global var
     static boolean connected = false;
     static Connection conn = null;
-    static String host, dbname, username, password;
     static final String[] tableName = {"Book", "Customer", "Ordering"};
+    static final HashMap<String, String> tableStruct = new HashMap<String, String>();
+    static {
+        tableStruct.put("Book", "(ISBN CHAR(13) not NULL, " +   //TODO: more detail?
+                                    " Title VARCHAR(100), " + 
+                                    " Authors VARCHAR(50), " + 
+                                    " Price INTEGER, " + 
+                                    " InventoryQuantity INTEGER, " +
+                                    " PRIMARY KEY (ISBN))");
+        tableStruct.put("Customer", "(UID CHAR(10) not NULL, " +   //TODO: more detail?
+                                        " Name VARCHAR(50), " + 
+                                        " Address VARCHAR(200), " + 
+                                        " PRIMARY KEY (UID))");
+        tableStruct.put("Ordering", "(OID CHAR(8) not NULL, " +   //TODO: more detail?
+                                        " UID CHAR(10) not NULL, " +
+                                        " OrderISBN CHAR(13) NOT NULL, " + 
+                                        " OrderDate DATE, " + 
+                                        " OrderQuantity INTEGER, " + 
+                                        " ShippingStatus VARCHAR(8), " + 
+                                        " PRIMARY KEY (OID, OrderISBN), " + 
+                                        " FOREIGN KEY (UID) REFERENCES Customer(UID), " + 
+                                        " FOREIGN KEY (OrderISBN) REFERENCES Book(ISBN))");
+    }
     static final String[][] content = {
         // page 0 (main menu)
         {"===== Welcome to Book Ordering Management System =====",  // Title
@@ -23,7 +44,7 @@ public class Main {
 
         // page 1 (Database Initialization)
         {"============== Database Initialization ==============",
-        "Login to Database and Create Missing Tables",
+        "Connect to Database and Create Missing Tables",
         "Load from File",
         "Delete All Records",
         "Back to Menu",
@@ -66,7 +87,7 @@ public class Main {
                     rs.next();
                     count = rs.getInt(1);
                 }catch(Exception x){
-                    System.out.print("Error:'" + tableName[i] + "'");
+                    System.err.print("Error:'" + tableName[i] + "'");
                 }
                 if(count != -1){
                     switch(i){
@@ -100,6 +121,7 @@ public class Main {
     static void connectDatabase(){
         clrscr();
         Scanner myScanner = new Scanner(System.in);
+        String host, dbname, username, password;
         
         System.out.println("Loading MySQL JDBC Driver...");
         try{
@@ -112,12 +134,12 @@ public class Main {
         }
         System.out.print("Enter your host server address(press Enter for local host): ");
         host = myScanner.nextLine();
-        if(host == "")
+        if(host.equals(""))
             host = "localhost";
 
         System.out.print("Enter your Database Name(press Enter for defalut name: BOOKORDING)(create if not exist): ");
         dbname = myScanner.nextLine();
-        if(dbname == "")
+        if(dbname.equals(""))
             dbname = "BOOKORDING";
 
         System.out.print("Enter your user name: ");
@@ -158,27 +180,6 @@ public class Main {
             }
         }
 
-        HashMap<String, String> tableStruct = new HashMap<String, String>();
-        tableStruct.put("Book", "(ISBN CHAR(13) not NULL, " +   //TODO: more detail?
-                                    " Title VARCHAR(100), " + 
-                                    " Authors VARCHAR(50), " + 
-                                    " Price INTEGER, " + 
-                                    " InventoryQuantity INTEGER, " +
-                                    " PRIMARY KEY (ISBN))");
-        tableStruct.put("Customer", "(UID CHAR(10) not NULL, " +   //TODO: more detail?
-                                        " Name VARCHAR(50), " + 
-                                        " Address VARCHAR(200), " + 
-                                        " PRIMARY KEY (UID))");
-        tableStruct.put("Ordering", "(OID CHAR(8) not NULL, " +   //TODO: more detail?
-                                        " UID CHAR(10) not NULL, " +
-                                        " OrderISBN CHAR(13) NOT NULL, " + 
-                                        " OrderDate DATE, " + 
-                                        " OrderQuantity INTEGER, " + 
-                                        " ShippingStatus VARCHAR(8), " + 
-                                        " PRIMARY KEY (OID, OrderISBN), " + 
-                                        " FOREIGN KEY (UID) REFERENCES Customer(UID), " + 
-                                        " FOREIGN KEY (OrderISBN) REFERENCES Book(ISBN))");
-        
         String newName;
         boolean newNameOK;
         int failcount = 0;
@@ -236,7 +237,6 @@ public class Main {
                 }
             }
         }
-
         connected = true;
     }
 
@@ -311,15 +311,15 @@ public class Main {
             while(maxPage*numberOfOnePage < buffer.size()-1)
                 maxPage++;
             int input = 0;
-            Scanner myScanner = new Scanner(System.in);
 
             while(input != 4){
+                Scanner myScanner = new Scanner(System.in);
                 clrscr();
                 System.out.printf("%" + ((80-tiltle.length())/2>0?(80-tiltle.length())/2:0) + "s%s\n", "", tiltle);
                 
                 if (buffer.size()==1){//ResultSet is empty
                     System.out.println("\n" + " ".repeat(29) + "---No results found---\n");
-                    System.out.println("(Press Enter to continue)");
+                    System.out.println("\n\n(Press Enter to continue)");
                     myScanner.nextLine();
                     return 0;
                 }
@@ -465,7 +465,6 @@ public class Main {
     public static void main(String[] args){
         int page = 0;
         int error = 0;
-        Scanner myScanner = new Scanner(System.in);
         while(page != 4){
             showMenu(page);
 
@@ -485,6 +484,7 @@ public class Main {
             }
             System.out.print(">>> Please Enter Your Query: ");
             int input = -1;
+            Scanner myScanner = new Scanner(System.in);
             try{
                 input = myScanner.nextInt();
             }catch(Exception e){
@@ -513,7 +513,41 @@ public class Main {
                             // TODO
                             break;
                         case 3: // Delete All Records
-                            // TODO
+                            if(!connected){
+                                clrscr();
+                                System.out.println("Fail to Connect to Database");
+                                System.out.println("(Press Enter to continue)\n");
+                                Scanner myScanner2 = new Scanner(System.in);
+                                myScanner2.nextLine();
+                                continue;
+                            }
+                            clrscr();
+                            System.out.println("Caution: Deleting ALL records at Books, Customers, and Orders");
+                            System.out.println("This action cannot be recovered.");
+                            System.out.print("Proceed? (Enter y|Y for Yes, any others for No): ");
+                            Scanner myScanner3 = new Scanner(System.in);
+                            String in = myScanner3.nextLine();
+                            if(in.equals("Y") || in.equals("y")){
+                                try{
+                                    Statement stmt = conn.createStatement();
+                                    for(int i = tableName.length-1; i>=0; i--)
+                                        stmt.executeUpdate("DROP TABLE " + tableName[i]);
+                                    for(String tname: tableName){
+                                        stmt.executeUpdate("CREATE TABLE " + tname + " " + tableStruct.get(tname));
+                                    }
+                                    System.err.println("\nAll records has been deleted");
+                                    System.err.println("(Press Enter to continue)");
+                                    Scanner myScanner2 = new Scanner(System.in);
+                                    myScanner2.nextLine();
+                                }catch(Exception x){
+                                    System.err.println("\nError while deleting records");
+                                    System.err.println("--- Disconnected to database ---");
+                                    System.err.println("(Press Enter to continue)");
+                                    connected = false;
+                                    Scanner myScanner2 = new Scanner(System.in);
+                                    myScanner2.nextLine();
+                                }
+                            }
                             break;
                         case 4: // Back to Menu
                             page = 0; 
@@ -605,7 +639,6 @@ public class Main {
             }
 
         }
-        myScanner.close();
         System.out.println("Bye");
     }
 }
