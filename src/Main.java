@@ -403,8 +403,8 @@ public class Main {
                 System.out.print(page>1?"1. Previous Page  ":" ".repeat(18)); 
                 System.out.print(" ".repeat(22-(pageS.length()+1)/2>0?22-(pageS.length()+1)/2:0));
                 System.out.print(pageS + " ".repeat(20-pageS.length()/2>0?20-pageS.length()/2:0));
-                System.out.println(page<maxPage?"  3. Next Page":" ");
-                System.out.println("4. Finish" + " ".repeat(23) + "5. Back to Menu" + " ".repeat(15) + "6. Quit the System\n");
+                System.out.println(page<maxPage?"  2. Next Page":" ");
+                System.out.println("3. Finish" + " ".repeat(23) + "4. Back to Menu" + " ".repeat(15) + "5. Quit the System\n");
                 
                 switch(input){
                     case 0:
@@ -431,16 +431,16 @@ public class Main {
                         if(page>1)
                             page--;
                         break;
-                    case 3:
+                    case 2:
                         input = page<maxPage ? 0 : 2;
                         if(page<maxPage)
                             page++;
                         break;
-                    case 4:
+                    case 3:
                         break;
-                    case 5:
+                    case 4:
                         return 2;
-                    case 6:
+                    case 5:
                         return 3;
                     default:
                         input = 2;
@@ -551,6 +551,7 @@ public class Main {
                                 showMessage("Fail to Connect to Database");
                                 continue;
                             }
+                            System.out.println("Book Searching\n");
                             System.out.println("Please enter the ISBN, Book Title and Author Name:");
                             System.out.println("(Leave it empty to not specify)");
                             Scanner myScanner2 = new Scanner(System.in);
@@ -583,6 +584,33 @@ public class Main {
                             break;
                         case 3: // Check History Orders
                             // TODO
+                            clrscr();
+                            if(!connected){
+                                showMessage("Fail to Connect to Database");
+                                continue;
+                            }
+                            System.out.println("Checking History Orders\n");
+                            String uid;
+                            Scanner myScanner3 = new Scanner(System.in);
+                            System.out.print("Please enter your UID:");
+                            uid = myScanner3.nextLine();
+                            try{
+                                Statement stmt = conn.createStatement();
+                                ResultSet rs = stmt.executeQuery(
+                                    "SELECT Ordering.oid AS 'OID', Ordering.OrderDate AS 'Date', Ordering.OrderISBN AS 'ISBN', Ordering.OrderQuantity AS 'Quantity', Ordering.ShippingStatus AS 'Status' " + 
+                                    "FROM Ordering " + 
+                                    "WHERE uid = '" + uid + "' " + 
+                                    "ORDER BY Ordering.oid DESC;");
+                                int[] colW = {10, 12, 15, 10, 10};
+                                int r = showRs(rs, "History Orders for UID: " + uid, colW);
+                                if(r==2)
+                                    page = 0;
+                                if(r==3)
+                                    page = 4; 
+                            }catch(Exception e){
+                                e.printStackTrace();
+                                System.err.println(e);
+                            }
                             break;
                         case 4: // Back to Menu
                             page = 0; 
@@ -605,6 +633,7 @@ public class Main {
                                 showMessage("Fail to Connect to Database");
                                 continue;
                             }
+                            System.out.println("Order Querying\n");
                             System.out.println("Orders in shipping status:");
                             System.out.println("> 1. ordered");
                             System.out.println("> 2. shipped");
