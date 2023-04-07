@@ -72,6 +72,12 @@ public class Main {
         for(int i = 0; i<100; i++)
             System.out.println();
     }
+    static void showMessage(String s){
+        System.err.println(s);
+        System.err.println("(Press Enter to continue)");
+        Scanner myScanner = new Scanner(System.in);
+        myScanner.nextLine();
+    }
     static void showMenu(int page){
         clrscr();
         
@@ -127,9 +133,7 @@ public class Main {
         try{
             Class.forName("com.mysql.cj.jdbc.Driver");
         }catch(Exception x){
-            System.err.println("\nError: Unable to load the driver class!");
-            System.err.println("(Press Enter to continue)");
-            myScanner.nextLine();
+            showMessage("\nError: Unable to load the driver class!");
             return;
         }
         System.out.print("Enter your host server address(press Enter for local host): ");
@@ -158,9 +162,7 @@ public class Main {
         try{
             conn = DriverManager.getConnection("jdbc:mysql://" + host, username, password);
         }catch(Exception x){
-            System.err.println("\nError: Fail to connect to host server / Invalid username and password");
-            System.err.println("(Press Enter to continue)");
-            myScanner.nextLine();
+            showMessage("\nError: Fail to connect to host server / Invalid username and password");
             return;
         }
 
@@ -173,9 +175,7 @@ public class Main {
                 stmt.executeUpdate("CREATE DATABASE " + dbname);
                 conn.setCatalog(dbname);
             }catch(Exception y){
-                System.err.println("\nError: Fail to create database");
-                System.err.println("(Press Enter to continue)");
-                myScanner.nextLine();
+                showMessage("\nError: Fail to create database");
                 return;
             }
         }
@@ -197,9 +197,7 @@ public class Main {
                 failcount++;
             }   
             if(failcount > 1000000){
-                System.err.println("\nError: Please try another database");
-                System.err.println("(Press Enter to continue)");
-                myScanner.nextLine();
+                showMessage("\nError: Please try another database");
                 return;
             }
         }while(!newNameOK);
@@ -229,10 +227,7 @@ public class Main {
                     if(rs.getInt(1)>0)
                         throw new Exception();
                 }catch(Exception y){
-                    System.err.println("\nError: Existing table not match");
-                    System.err.println("Please try another database or delete the existing table '" + tname + "'");
-                    System.err.println("(Press Enter to continue)");
-                    myScanner.nextLine();
+                    System.err.println("\nError: Existing table not match \nPlease try another database or delete the existing table '" + tname + "'");
                     return;
                 }
             }
@@ -319,8 +314,7 @@ public class Main {
                 
                 if (buffer.size()==1){//ResultSet is empty
                     System.out.println("\n" + " ".repeat(29) + "---No results found---\n");
-                    System.out.println("\n\n(Press Enter to continue)");
-                    myScanner.nextLine();
+                    showMessage("\n");
                     return 0;
                 }
 
@@ -513,20 +507,17 @@ public class Main {
                             // TODO
                             break;
                         case 3: // Delete All Records
+                            clrscr();
                             if(!connected){
                                 clrscr();
-                                System.out.println("Fail to Connect to Database");
-                                System.out.println("(Press Enter to continue)\n");
-                                Scanner myScanner2 = new Scanner(System.in);
-                                myScanner2.nextLine();
+                                showMessage("Fail to Connect to Database");
                                 continue;
                             }
-                            clrscr();
                             System.out.println("Caution: Deleting ALL records at Books, Customers, and Orders");
                             System.out.println("This action cannot be recovered.");
                             System.out.print("Proceed? (Enter y|Y for Yes, any others for No): ");
-                            Scanner myScanner3 = new Scanner(System.in);
-                            String in = myScanner3.nextLine();
+                            Scanner myScanner2 = new Scanner(System.in);
+                            String in = myScanner2.nextLine();
                             if(in.equals("Y") || in.equals("y")){
                                 try{
                                     Statement stmt = conn.createStatement();
@@ -535,17 +526,10 @@ public class Main {
                                     for(String tname: tableName){
                                         stmt.executeUpdate("CREATE TABLE " + tname + " " + tableStruct.get(tname));
                                     }
-                                    System.err.println("\nAll records has been deleted");
-                                    System.err.println("(Press Enter to continue)");
-                                    Scanner myScanner2 = new Scanner(System.in);
-                                    myScanner2.nextLine();
+                                    showMessage("\nAll records has been deleted");
                                 }catch(Exception x){
-                                    System.err.println("\nError while deleting records");
-                                    System.err.println("--- Disconnected to database ---");
-                                    System.err.println("(Press Enter to continue)");
+                                    showMessage("\nError while deleting records\n--- Disconnected to database ---");
                                     connected = false;
-                                    Scanner myScanner2 = new Scanner(System.in);
-                                    myScanner2.nextLine();
                                 }
                             }
                             break;
@@ -562,15 +546,11 @@ public class Main {
                 case 2: // page 2 (Customer Operation)
                     switch(input){
                         case 1: // Book Search
+                            clrscr();
                             if(!connected){
-                                clrscr();
-                                System.out.println("Fail to Connect to Database");
-                                System.out.println("(Press Enter to continue)\n");
-                                Scanner myScanner2 = new Scanner(System.in);
-                                myScanner2.nextLine();
+                                showMessage("Fail to Connect to Database");
                                 continue;
                             }
-                            clrscr();
                             System.out.println("Please enter the ISBN, Book Title and Author Name:");
                             System.out.println("(Leave it empty to not specify)");
                             Scanner myScanner2 = new Scanner(System.in);
@@ -620,18 +600,60 @@ public class Main {
                             // TODO
                             break;
                         case 2: // Order Query
-                            // TODO
-                            // SELECT *
-                            // FROM Ordering
-                            // WHERE ShippingStatus = '???';
+                            clrscr();
+                            if(!connected){
+                                showMessage("Fail to Connect to Database");
+                                continue;
+                            }
+                            System.out.println("Orders in shipping status:");
+                            System.out.println("> 1. ordered");
+                            System.out.println("> 2. shipped");
+                            System.out.println("> 3. received\n");
+                            Scanner myScanner2 = new Scanner(System.in);
+                            System.out.print(">>> Please Enter Your Query: ");
+                            int input2 = -1;
+                            String status;
+                            try{
+                                input2 = myScanner2.nextInt();
+                                switch(input2){
+                                    case 1:
+                                        status = "ordered";
+                                        break;
+                                    case 2:
+                                        status = "shipped";
+                                        break;
+                                    case 3:
+                                        status = "received";
+                                        break;
+                                    default:
+                                        throw new Exception();
+                                }
+                            }catch(Exception e){
+                                showMessage("\nError: Unknown input received");
+                                continue;
+                            }
+                            try{
+                                Statement stmt = conn.createStatement();
+                                ResultSet rs = stmt.executeQuery(
+                                    "SELECT Ordering.oid AS 'OID', Ordering.OrderDate AS 'Date', Ordering.UID, Ordering.OrderISBN AS 'ISBN', Ordering.OrderQuantity AS 'Quantity' " + 
+                                    "FROM Ordering " +  
+                                    "WHERE Ordering.ShippingStatus = '" + status + "' " +
+                                    "ORDER BY Ordering.oid ASC;");
+                                int[] colW = {10, 12, 12, 15, 10};
+                                int r = showRs(rs, "Orders in status: " + status, colW);
+                                if(r==2)
+                                    page = 0;
+                                if(r==3)
+                                    page = 4; 
+                            }catch(Exception e){
+                                e.printStackTrace();
+                                System.err.println(e);
+                            }
                             break;
                         case 3: // Check Most Popular Books
+                            clrscr();
                             if(!connected){
-                                clrscr();
-                                System.out.println("Fail to Connect to Database");
-                                System.out.println("(Press Enter to continue)\n");
-                                Scanner myScanner2 = new Scanner(System.in);
-                                myScanner2.nextLine();
+                                showMessage("Fail to Connect to Database");
                                 continue;
                             }
                             try{
