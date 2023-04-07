@@ -625,17 +625,12 @@ public class Main {
                 case 3: // page 3 (Bookstore Operation)
                     switch(input){
                         case 1: // Order Update
-                            // TODO
                             clrscr();
                             if(!connected){
                                 showMessage("Fail to Connect to Database");
                                 continue;
                             }
                             System.out.println("Order Updating\n");
-                            // System.out.println("Orders in shipping status:");
-                            // System.out.println("> 1. ordered");
-                            // System.out.println("> 2. shipped");
-                            // System.out.println("> 3. received\n");
                             System.out.println("Please enter the OID and the Order ISBN:");
                             System.out.println("(Leave ISBN empty to change all status in the order)");
                             Scanner myScanner2 = new Scanner(System.in);
@@ -656,7 +651,7 @@ public class Main {
                                 if(!rs.next()){
                                     throw new Exception("\nOID " + oid + " not found");
                                 }
-                                if(!isbn.equals("")){   // (one record only)
+                                if(!isbn.equals("")){   // max one record -> check if isbn exist
                                     rs = stmt.executeQuery(
                                         "SELECT * " + 
                                         "FROM Ordering " + 
@@ -664,7 +659,7 @@ public class Main {
                                     if(!rs.next()){
                                         throw new Exception("\nBook isbn: " + isbn + " not found in OID: " + oid);
                                     }
-                                }else{
+                                }else{  // more than one record -> check if all status equal
                                     rs = stmt.executeQuery(
                                         "SELECT COUNT(DISTINCT ShippingStatus) AS Num " + 
                                         "FROM Ordering " + 
@@ -733,8 +728,6 @@ public class Main {
                                                     "WHERE OID = '" + oid + "' " + 
                                                     (isbn.equals("")?"":("AND orderIsbn = '" + isbn + "' ")));
                                 throw new Exception("\nStatus updated");
-                                // SELECT COUNT(DISTINCT ShippingStatus) AS NumStatus
-                                // FROM Ordering;
                             }catch(Exception e){
                                 if(!e.getMessage().equals(""))
                                     showMessage(e.getMessage());
