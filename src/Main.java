@@ -562,12 +562,41 @@ public class Main {
                 case 2: // page 2 (Customer Operation)
                     switch(input){
                         case 1: // Book Search
-                            // TODO
-                            // SELECT *
-                            // FROM Book
-                            // WHERE ISBN = '1234567890123' 
-                            //       Title LIKE '%Harry Potter%' 
-                            //       Authors LIKE '%J.K. Rowling%';
+                            if(!connected){
+                                clrscr();
+                                System.out.println("Fail to Connect to Database");
+                                System.out.println("(Press Enter to continue)\n");
+                                Scanner myScanner2 = new Scanner(System.in);
+                                myScanner2.nextLine();
+                                continue;
+                            }
+                            clrscr();
+                            System.out.println("Please enter the ISBN, Book Title and Author Name:");
+                            System.out.println("(Leave it empty to not specify)");
+                            Scanner myScanner2 = new Scanner(System.in);
+                            String isbn, title, aname;
+                            System.out.print("ISBN: ");
+                            isbn = myScanner2.nextLine();
+                            System.out.print("Book Title: ");
+                            title = myScanner2.nextLine();
+                            System.out.print("Author Name: ");
+                            aname = myScanner2.nextLine();
+                            try{
+                                Statement stmt = conn.createStatement();
+                                ResultSet rs = stmt.executeQuery(
+                                    "SELECT Book.ISBN, Book.Title AS 'Book Title', Book.Authors AS 'Author', Book.Price, Book.InventoryQuantity AS 'Stock' " + 
+                                    "FROM Book " + 
+                                    "WHERE ISBN LIKE '%" + isbn + "%' AND Title LIKE '%" + title + "%' AND Authors LIKE '%" + aname + "%'");
+                                int[] colW = {13, 31, 20, 5, 5};
+                                int r = showRs(rs, "Book Search", colW);
+                                if(r==2)
+                                    page = 0;
+                                if(r==3)
+                                    page = 4; 
+                            }catch(Exception e){
+                                e.printStackTrace();
+                                System.err.println(e);
+                            }
                             break;
                         case 2: // Place Order
                             // TODO
@@ -615,7 +644,7 @@ public class Main {
                                     "GROUP BY Book.ISBN " + 
                                     "ORDER BY 'Total Orders' DESC;");
                                 int[] colW = {4, 9, 13, 30, 12, 5};
-                                int r = showRs(rs, "tututu title test", colW);
+                                int r = showRs(rs, "Most Popular Books", colW);
                                 if(r==2)
                                     page = 0;
                                 if(r==3)
