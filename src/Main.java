@@ -36,14 +36,14 @@ public class Main {
     }
     static final String[][] content = {
         // page 0 (main menu)
-        {"===== Welcome to Book Ordering Management System =====",  // Title
+        {"================== Welcome to Book Ordering Management System ==================",  // Title
         "Database Initialization",  // choice 1
         "Customer Operation",   // choice 2 ...
         "Bookstore Operation",
         "Quit the System"},
 
         // page 1 (Database Initialization)
-        {"============== Database Initialization ==============",
+        {"=========================== Database Initialization ============================",
         "Connect to Database and Create Missing Tables",
         "Load from File",
         "Delete All Records",
@@ -51,7 +51,7 @@ public class Main {
         "Quit the System"},
 
         // page 2 (Customer Operation)
-        {"================= Customer Operation =================",
+        {"============================== Customer Operation ==============================",
         "Book Search",
         "Place Order",  // (make order)
         "Check History Orders",
@@ -59,7 +59,7 @@ public class Main {
         "Quit the System"},
 
         // page 3 (Bookstore Operation)
-        {"================ Bookstore Operation ================",
+        {"============================== Bookstore Operation =============================",
         "Order Update",
         "Order Query",
         "Check Most Popular Books",
@@ -114,7 +114,7 @@ public class Main {
         }else{
             System.out.println("--Fail to Connect to Database--");
         }
-        System.out.println("\n----------------------------------------------------\n");
+        System.out.println("\n" + "-".repeat(80) + "\n");
         for(int i = 1; i<8; i++){
             if(i<content[page].length)
                 System.out.println("> " + i + ". " + content[page][i]);
