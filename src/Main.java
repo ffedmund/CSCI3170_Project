@@ -159,18 +159,17 @@ public class Main {
         }
 
         HashMap<String, String> tableStruct = new HashMap<String, String>();
-        tableStruct.put("Book", "(ISBN CHAR(13) not NULL, " +   //TODO: change to correct schema
+        tableStruct.put("Book", "(ISBN CHAR(13) not NULL, " +   //TODO: more detail?
                                     " Title VARCHAR(100), " + 
                                     " Authors VARCHAR(50), " + 
                                     " Price INTEGER, " + 
                                     " InventoryQuantity INTEGER, " +
                                     " PRIMARY KEY (ISBN))");
-        tableStruct.put("Customer", "(UID CHAR(10) not NULL, " +   //TODO: change to correct schema
+        tableStruct.put("Customer", "(UID CHAR(10) not NULL, " +   //TODO: more detail?
                                         " Name VARCHAR(50), " + 
                                         " Address VARCHAR(200), " + 
-                                        " age INTEGER, " + 
                                         " PRIMARY KEY (UID))");
-        tableStruct.put("Ordering", "(OID CHAR(8) not NULL, " +   //TODO: change to correct schema
+        tableStruct.put("Ordering", "(OID CHAR(8) not NULL, " +   //TODO: more detail?
                                         " UID CHAR(10) not NULL, " +
                                         " OrderISBN CHAR(13) NOT NULL, " + 
                                         " OrderDate DATE, " + 
@@ -260,7 +259,7 @@ public class Main {
             ArrayList<String> colName = new ArrayList<String>();
             List<ArrayList<String>> buffer = new ArrayList<ArrayList<String>>();
             for (int i = 1; i <= columnsNumber; i++) {
-                colName.add(rsmd.getColumnName(i));
+                colName.add(rsmd.getColumnLabel(i));
             }
             buffer.add(colName);
             while (rs.next()) {
@@ -317,6 +316,13 @@ public class Main {
             while(input != 4){
                 clrscr();
                 System.out.printf("%" + ((80-tiltle.length())/2>0?(80-tiltle.length())/2:0) + "s%s\n", "", tiltle);
+                
+                if (buffer.size()==1){//ResultSet is empty
+                    System.out.println("\n" + " ".repeat(29) + "---No results found---\n");
+                    System.out.println("(Press Enter to continue)");
+                    myScanner.nextLine();
+                    return 0;
+                }
 
                 // print upper +-------+--------+...
                 for(int w : colW)
@@ -341,7 +347,7 @@ public class Main {
                             char[] sp = {' ', ',', '-'};
                             int[] pos = new int[sp.length];
                             for(int j=0; j<sp.length; j++)
-                                pos[j] = tmpS.lastIndexOf(sp[j]);
+                                pos[j] = tmpS.lastIndexOf(sp[j], colW[i]-1);
                             int maxIndex = -1;
                             for (int p : pos) {
                                 if (p > maxIndex && p < colW[i]) {
@@ -370,7 +376,7 @@ public class Main {
                                 char[] sp = {' ', ',', '-'};
                                 int[] pos = new int[sp.length];
                                 for(int j=0; j<sp.length; j++)
-                                    pos[j] = tmpS.lastIndexOf(sp[j]);
+                                    pos[j] = tmpS.lastIndexOf(sp[j], colW[i]-1);
                                 int maxIndex = -1;
                                 for (int p : pos) {
                                     if (p > maxIndex && p < colW[i]) {
@@ -402,9 +408,9 @@ public class Main {
                 String pageS = "Page " + page + "/" + maxPage;
                 System.out.print(page>1?"1. Previous Page  ":" ".repeat(18)); 
                 System.out.print(" ".repeat(22-(pageS.length()+1)/2>0?22-(pageS.length()+1)/2:0));
-                System.out.print(pageS + " ".repeat(22-pageS.length()/2>0?22-pageS.length()/2:0));
+                System.out.print(pageS + " ".repeat(20-pageS.length()/2>0?20-pageS.length()/2:0));
                 System.out.println(page<maxPage?"  3. Next Page":" ");
-                System.out.println("4. Finish" + " ".repeat(23) + "5. Back to Menu" + " ".repeat(17) + "6. Quit the System\n");
+                System.out.println("4. Finish" + " ".repeat(23) + "5. Back to Menu" + " ".repeat(15) + "6. Quit the System\n");
                 
                 switch(input){
                     case 0:
@@ -523,6 +529,11 @@ public class Main {
                     switch(input){
                         case 1: // Book Search
                             // TODO
+                            // SELECT *
+                            // FROM Book
+                            // WHERE ISBN = '1234567890123' 
+                            //       Title LIKE '%Harry Potter%' 
+                            //       Authors LIKE '%J.K. Rowling%';
                             break;
                         case 2: // Place Order
                             // TODO
@@ -547,9 +558,38 @@ public class Main {
                             break;
                         case 2: // Order Query
                             // TODO
+                            // SELECT *
+                            // FROM Ordering
+                            // WHERE ShippingStatus = '???';
                             break;
                         case 3: // Check Most Popular Books
-                            // TODO
+                            if(!connected){
+                                clrscr();
+                                System.out.println("Fail to Connect to Database");
+                                System.out.println("(Press Enter to continue)\n");
+                                Scanner myScanner2 = new Scanner(System.in);
+                                myScanner2.nextLine();
+                                continue;
+                            }
+                            try{
+                                Statement stmt = conn.createStatement();
+                                ResultSet rs = stmt.executeQuery(
+                                    "SELECT DENSE_RANK() OVER (ORDER BY SUM(Ordering.OrderQuantity) DESC) AS 'Rank', Book.InventoryQuantity AS 'Inventory', " + 
+                                    "Book.ISBN, Book.Title AS 'Book Title', SUM(Ordering.OrderQuantity) AS 'Total Orders', Book.Price " + 
+                                    "FROM Book " + 
+                                    "INNER JOIN Ordering ON Book.ISBN = Ordering.OrderISBN " + 
+                                    "GROUP BY Book.ISBN " + 
+                                    "ORDER BY 'Total Orders' DESC;");
+                                int[] colW = {4, 9, 13, 30, 12, 5};
+                                int r = showRs(rs, "tututu title test", colW);
+                                if(r==2)
+                                    page = 0;
+                                if(r==3)
+                                    page = 4; 
+                            }catch(Exception e){
+                                e.printStackTrace();
+                                System.err.println(e);
+                            }
                             break;
                         case 4: // Back to Menu
                             page = 0; 
