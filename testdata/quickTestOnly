@@ -1,0 +1,45 @@
+INSERT INTO Book (ISBN, Title, Authors, Price, InventoryQuantity) VALUES 
+('9780345538376', 'A Game of Thrones', 'George R.R. Martin', 899, 10),
+('9780553103540', 'Dune', 'Frank Herbert', 699, 5),
+('9780316075823', 'The Hunger Games', 'Suzanne Collins', 799, 15),
+('9781400067884', 'Freedom', 'Jonathan Franzen', 1199, 7),
+('9780670020553', 'A Visit from the Goon Squad', 'Jennifer Egan', 999, 3),
+('9780307474314', 'The Immortal Life of Henrietta Lacks', 'Rebecca Skloot', 899, 20),
+('9780618711659', 'The Brief Wondrous Life of Oscar Wao', 'Junot Diaz', 799, 12),
+('9780316015844', 'The Road', 'Cormac McCarthy', 999, 6),
+('9780062315007', 'The Goldfinch', 'Donna Tartt', 1299, 8),
+('9780316067927', 'Catching Fire', 'Suzanne Collins', 799, 18),
+('9780441172719', 'Dune Messiah', 'Frank Herbert', 599, 3),
+('9780345370771', 'The Hitchhiker\'s Guide to the Galaxy', 'Douglas Adams', 699, 9),
+('9780525564627', 'The Dutch House', 'Ann Patchett', 1099, 5),
+('9780140283339', 'The Things They Carried', 'Tim O\'Brien', 899, 14),
+('9780060935467', 'The Poisonwood Bible', 'Barbara Kingsolver', 799, 11);
+
+INSERT INTO Customer (UID, Name, Address) VALUES 
+('C001', 'John Doe', '123 Main St, Anytown, USA'),
+('C002', 'Jane Doe', '456 Oak Ave, Somewhere, USA'),
+('C003', 'Bob Smith', '789 Maple Ln, Anytown, USA'),
+('C004', 'Alice Jones', '321 Elm St, Somewhere, USA'),
+('C005', 'Tom Brown', '654 Pine Rd, Anytown, USA');
+
+INSERT INTO Ordering (OID, UID, OrderISBN, OrderDate, OrderQuantity, ShippingStatus) VALUES 
+('O0000001', 'C001', '9780345538376', '2022-01-01', 2, 'shipped'),
+('O0000002', 'C002', '9780553103540', '2022-01-02', 1, 'received'),
+('O0000003', 'C003', '9780316075823', '2022-01-03', 3, 'ordered'),
+('O0000004', 'C004', '9781400067884', '2022-01-04', 1, 'shipped'),
+('O0000005', 'C005', '9780670020553', '2022-01-05', 2, 'shipped'),
+('O0000006', 'C002', '9780345538376', '2022-01-06', 1, 'shipped'),
+('O0000007', 'C003', '9780316075823', '2022-01-07', 3, 'ordered'),
+('O0000008', 'C001', '9780307474314', '2022-01-08', 1, 'received'),
+('O0000009', 'C004', '9780618711659', '2022-01-09', 2, 'shipped'),
+('O0000010', 'C005', '9780316015844', '2022-01-10', 1, 'shipped'),
+('O0000011', 'C003', '9780062315007', '2022-01-11', 3, 'ordered'),
+('O0000012', 'C002', '9780316067927', '2022-01-12', 2, 'shipped'),
+('O0000013', 'C001', '9780441172719', '2022-01-13', 1, 'shipped'),
+('O0000014', 'C005', '9780345370771', '2022-01-14', 4, 'received'),
+('O0000015', 'C003', '9780525564627', '2022-01-15', 2, 'ordered'),
+('O0000016', 'C001', '9780316075823', '2022-01-16', 1, 'shipped'),
+('O0000017', 'C002', '9780140283339', '2022-01-17', 2, 'shipped'),
+('O0000018', 'C001', '9780060935467', '2022-01-18', 1, 'received'),
+('O0000019', 'C003', '9780345538376', '2022-01-19', 3, 'ordered'),
+('O0000020', 'C004', '9780553103540', '2022-01-20', 2, 'shipped');
