@@ -42,7 +42,7 @@ public class Main {
         "Bookstore Operation",
         "Quit the System"},
 
-        // page 1 (Database Initialization)
+        // page 1
         {"=========================== Database Initialization ============================",
         "Connect to Database and Create Missing Tables",
         "Load from File",
@@ -50,7 +50,7 @@ public class Main {
         "Back to Menu",
         "Quit the System"},
 
-        // page 2 (Customer Operation)
+        // page 2
         {"============================== Customer Operation ==============================",
         "Book Search",
         "Place Order",  // (make order)
@@ -58,7 +58,7 @@ public class Main {
         "Back to Menu",
         "Quit the System"},
 
-        // page 3 (Bookstore Operation)
+        // page 3
         {"============================== Bookstore Operation =============================",
         "Order Update",
         "Order Query",
@@ -66,26 +66,44 @@ public class Main {
         "Back to Menu",
         "Quit the System"}
     };
+    // (end of global var)
     
     // functions
-    static void clrscr(){   // clear screen
+
+    /**
+     * clear screen
+     * (by printing 100 '\n')
+     */
+    static void clrscr(){   // 
         for(int i = 0; i<100; i++)
             System.out.println();
     }
+
+    /**
+     * print message s and ask user to press enter
+     * to ensure message are shown before flushed away
+     */
     static void showMessage(String s){
         System.err.println(s);
         System.err.println("(Press Enter to continue)");
         Scanner myScanner = new Scanner(System.in);
         myScanner.nextLine();
     }
+
+    /**
+     * show the specific page
+     */
     static void showMenu(int page){
         clrscr();
         
+        // print header (title, date, database info.)
         System.out.println(content[page][0]);
-        System.out.println("\n + System Date: " + LocalDate.now());
+        System.out.println("\n + System Date: " + LocalDate.now()); // TODO: show currect time?
         System.out.print(" + Database Records: ");
-        if(connected){
-            for(int i = 0; i<3; i++){
+        if(!connected){
+            System.out.println("--Fail to Connect to Database--");
+        }else{
+            for(int i = 0; i<tableName.size(); i++){
                 int count = -1;
                 try{
                     Statement stmt = conn.createStatement();
@@ -93,7 +111,7 @@ public class Main {
                     rs.next();
                     count = rs.getInt(1);
                 }catch(Exception x){
-                    System.err.print("Error:'" + tableName[i] + "'");
+                    System.err.print("Error: '" + tableName[i] + "' ");
                 }
                 if(count != -1){
                     switch(i){
@@ -107,14 +125,14 @@ public class Main {
                             System.out.print("Orders (");
                             break;
                     }
-                    System.out.print(count + ")" + (i<2?", ":" "));
+                    System.out.print(count + ")" + (i<tableName.size()-1 ? ", " : " "));
                 }
             }
             System.out.println();
-        }else{
-            System.out.println("--Fail to Connect to Database--");
         }
         System.out.println("\n" + "-".repeat(80) + "\n");
+
+        // print options
         for(int i = 1; i<8; i++){
             if(i<content[page].length)
                 System.out.println("> " + i + ". " + content[page][i]);
@@ -124,11 +142,17 @@ public class Main {
         System.out.println();
     }
 
+    /**
+     * try to ask user for information and connect to database
+     * modifying global var: conn, connected
+     */
     static void connectDatabase(){
         clrscr();
         Scanner myScanner = new Scanner(System.in);
+        Connection oldConn = conn;  // save the original connection
         String host, dbname, username, password;
         
+        // return if fail to load the driver
         System.out.println("Loading MySQL JDBC Driver...");
         try{
             Class.forName("com.mysql.cj.jdbc.Driver");
@@ -136,20 +160,22 @@ public class Main {
             showMessage("\nError: Unable to load the driver class!");
             return;
         }
+
+        // ask user to input connection information
         System.out.print("Enter your host server address(press Enter for local host): ");
         host = myScanner.nextLine();
-        if(host.equals(""))
+        if(host.equals("")) // default value of host if nothing entered
             host = "localhost";
 
         System.out.print("Enter your Database Name(press Enter for defalut name: BOOKORDING)(create if not exist): ");
         dbname = myScanner.nextLine();
-        if(dbname.equals(""))
+        if(dbname.equals(""))   // default value of dbname if nothing entered
             dbname = "BOOKORDING";
 
         System.out.print("Enter your user name: ");
         username = myScanner.nextLine();
-                
-        Console console = System.console();
+        
+        Console console = System.console(); // try to mask password if possible
         if (console == null) {
             System.out.print("Enter your password: ");
             password = myScanner.nextLine();
@@ -162,60 +188,70 @@ public class Main {
         try{
             conn = DriverManager.getConnection("jdbc:mysql://" + host, username, password);
         }catch(Exception x){
+            conn = oldConn; // roll back the change
             showMessage("\nError: Fail to connect to host server / Invalid username and password");
             return;
         }
 
         // try to switch database
-        try{
+        try{    // try switching, got exception if database not exist
             conn.setCatalog(dbname);
         }catch(Exception x){
-            try{    // try to create database if not exist
+            try{    // try to create database as not exist
                 Statement stmt = conn.createStatement();
                 stmt.executeUpdate("CREATE DATABASE " + dbname);
                 conn.setCatalog(dbname);
             }catch(Exception y){
+                conn = oldConn; // roll back the change
                 showMessage("\nError: Fail to create database");
                 return;
             }
         }
 
+        // in order to check the schema of the existing table,
+        // a new table name is randomly generated for comparison
         String newName;
         boolean newNameOK;
-        int failcount = 0;
+        int failcount = 0;  // count the times of generated a repeated name
         do{
             newNameOK = true;
             newName = "temp";
-            for(int i = 0; i<40; i++)
+            for(int i = 0; i<40; i++)   // avoid by adding random char
                 newName += (char)('A' + Math.random() * 26);
-            try{
+            
+            try{    // try to create a table from newName, got exception if the table exist originally
                 Statement stmt = conn.createStatement();
                 stmt.executeUpdate("CREATE TABLE " + newName + " (c char)");
                 stmt.executeUpdate("DROP TABLE " + newName);
-            }catch(Exception x){
+            }catch(Exception x){    // the name got repeated
+                conn = oldConn; // roll back the change
                 newNameOK = false;
                 failcount++;
             }   
-            if(failcount > 1000000){
+
+            if(failcount > 1000000){    // stop generation (and give up) if the name always exist in the database
+                conn = oldConn; // roll back the change
                 showMessage("\nError: Please try another database");
                 return;
             }
-        }while(!newNameOK);
+        }while(!newNameOK); // keep generating until new name ok
         
-        // check if the table exist, exist->Exception x->check if the schema correct, not exist->create table book
+        // check if the table exist, exist->check if the schema correct, not exist->create table
         for(String tname: tableName){
-            try{
+            try{    // try to create table in the table name, got exception if existed
                 Statement stmt = conn.createStatement();
                 stmt.executeUpdate("CREATE TABLE " + tname + " " + tableStruct.get(tname));
-            }catch(Exception x){    // table exist: check schema
+            }catch(Exception x){    // table exist -> check schema
                 try{
-                    Statement stmt = conn.createStatement();
+                    Statement stmt = conn.createStatement();    // create a table with correct schema
                     stmt.executeUpdate("CREATE TABLE " + newName + " " + tableStruct.get(tname));
+
+                    /**
+                     * TODO: add reference?
+                     * Comparison Query modify from:
+                     * https://dba.stackexchange.com/questions/75532/query-to-compare-the-structure-of-two-tables-in-mysql
+                     */
                     Statement stmt2 = conn.createStatement();
-                    /* TODO: reference?
-                    * Comparison Query modify from:
-                    * https://dba.stackexchange.com/questions/75532/query-to-compare-the-structure-of-two-tables-in-mysql
-                    */
                     ResultSet rs = stmt2.executeQuery("SELECT COUNT(1) FROM " + 
                                                         "(SELECT column_name,ordinal_position,data_type,column_type,COUNT(1) rowcount " +
                                                         "FROM information_schema.columns " + 
@@ -223,10 +259,12 @@ public class Main {
                                                         "GROUP BY column_name,ordinal_position,data_type,column_type "+
                                                         "HAVING COUNT(1)=1) A");
                     stmt.executeUpdate("DROP TABLE " + newName);
+
                     rs.next();
-                    if(rs.getInt(1)>0)
+                    if(rs.getInt(1)>0)  // if the existing table do not match with the schema we want, throw exception
                         throw new Exception();
-                }catch(Exception y){
+                }catch(Exception y){    // connection fail due to (the database exist a table with different schema) OR (any other exception got)
+                    conn = oldConn; // roll back the change
                     System.err.println("\nError: Existing table not match \nPlease try another database or delete the existing table '" + tname + "'");
                     return;
                 }
@@ -235,6 +273,7 @@ public class Main {
         connected = true;
     }
 
+    // // sample use of the funciton:
     // try{
     //     Statement stmt = conn.createStatement();
     //     ResultSet rs = stmt.executeQuery("SELECT * FROM Book");
@@ -242,13 +281,24 @@ public class Main {
     //     showRs(rs, "book test", colW);
     // }catch(Exception e){
     //     e.printStackTrace();
-    //     System.err.println(e);
+    //     showMessage(e);
     // }
-    /* colW e.g.:{6, 5, 3}
-     * +------+-----+---+
-     * quit with 0:normal, 1:error, 2:back to menu, 3:quit program */
+    /**
+     * show the resultset rs in a formatted way
+     * quit with 0:normal, 1:error, 2:back to menu, 3:quit program
+     * parameter: 
+     *      rs: the resultset to be shown, 
+     *      tiltle: title that will be shown on top of rs,
+     *      colW: the width of each column (auto gen if col # not match)
+     * colW e.g.:{6, 5, 2}
+     * +------+-----+--+
+     * |test  |abcde|12|
+     * |      |fg   |  |
+     * +------+-----+--+
+     */
     static int showRs(ResultSet rs, String tiltle, int[] colW){
-        try{
+        try{    // nearly the whole function is wrapped by try-catch
+            // getting the label of each column
             ResultSetMetaData rsmd = rs.getMetaData();
             int columnsNumber = rsmd.getColumnCount();
             ArrayList<String> colName = new ArrayList<String>();
@@ -257,6 +307,8 @@ public class Main {
                 colName.add(rsmd.getColumnLabel(i));
             }
             buffer.add(colName);
+
+            // buffering all the record to better preform random access(page switching)
             while (rs.next()) {
                 ArrayList<String> record = new ArrayList<>();
                 for (int i = 1; i <= columnsNumber; i++) {
@@ -265,35 +317,42 @@ public class Main {
                 buffer.add(record);
             }
             
+            // re-calculate colW if column number of inputted colW is not match with rs
             if(colW.length != columnsNumber){
                 colW = new int[colName.size()];
                 for (int i = 0; i < colName.size(); i++) {
                     colW[i] = colName.get(i).length();
-                    for (ArrayList<String> row : buffer) {
+                    for (ArrayList<String> row : buffer) {  // find max string length for each column
                         if (row.get(i).length() > colW[i]) {
                             colW[i] = row.get(i).length();
                         }
                     }
                 }
+                
                 int sum = 0;
                 for(int w: colW)
                     sum += w;
                 int min = 5;
-                while(sum+columnsNumber+1>80){
+                while(sum+columnsNumber+1>80){  // reduce each colW by 1 if the total print width > 80
                     boolean sumChanged = false;
+                    // decrease while keeping a min width
                     for(int i=0; i<columnsNumber; i++)
                         if(colW[i]>min){
                             colW[i]--;
                             sumChanged = true;
                         }
-                    if(!sumChanged){
+                    
+                    // if impossible even width of each column = 1, give up to keep the total width in 80
+                    if(!sumChanged){    
                         min--;
-                        if(min==0){
+                        if(min==0){ // give up and set each width in 2
                             for(int i=0; i<columnsNumber; i++)
                                 colW[i] = 2;
                             break;
                         }
                     }
+
+                    // re-calculate sum of colW to check while-loop condition
                     sum = 0;
                     for(int w: colW)
                         sum += w;
@@ -301,18 +360,19 @@ public class Main {
             }
 
             int page = 1;
-            final int numberOfOnePage = 10;
+            final int numberOfOnePage = 10; // number of records show in one page
             int maxPage = 1;
-            while(maxPage*numberOfOnePage < buffer.size()-1)
+            while(maxPage*numberOfOnePage < buffer.size()-1)    // find the maximum page number
                 maxPage++;
             int input = 0;
 
-            while(input != 3){
+            while(input != 3){  // input==3 -> quit normally
                 Scanner myScanner = new Scanner(System.in);
                 clrscr();
+                // print title in the center (80 width)
                 System.out.printf("%" + ((80-tiltle.length())/2>0?(80-tiltle.length())/2:0) + "s%s\n", "", tiltle);
                 
-                if (buffer.size()==1){//ResultSet is empty
+                if (buffer.size()==1){  //ResultSet is empty
                     System.out.println("\n" + " ".repeat(29) + "---No results found---\n");
                     showMessage("\n");
                     return 0;
@@ -323,82 +383,134 @@ public class Main {
                     System.out.print("+" + "-".repeat(w));
                 System.out.println("+");
 
-                HashMap<Integer, String> remainingString = new HashMap<Integer, String>();
+                //print data(records)
+                // HashMap<Integer, String> remainingString = new HashMap<Integer, String>();   // TODO: test error(same with that below)
                 for(int r=0; r<=numberOfOnePage; r++){
                     ArrayList<String> row;
-                    if(r==0){
+                    // load the print data
+                    if(r==0){   // r==0 -> column label
                         row = buffer.get(0);
-                    }else{
-                        if((page-1)*numberOfOnePage + r >= buffer.size())
-                            break;
-                        row = buffer.get((page-1)*numberOfOnePage + r);
+                    }else{  // load the required record in buffer to row
+                        if((page-1)*numberOfOnePage + r >= buffer.size())   // TODO: test if error
+                            for (int i = 1; i <= columnsNumber; i++)
+                                row.add("");
+                        else
+                            row = buffer.get((page-1)*numberOfOnePage + r);
                     }
-                    for(int i=0; i<columnsNumber; i++){
-                        String tmpS = row.get(i);
-                        if(tmpS==null)
-                            tmpS = "";
-                        if(tmpS.length()>colW[i]){
-                            char[] sp = {' ', ',', '-'};
-                            int[] pos = new int[sp.length];
-                            for(int j=0; j<sp.length; j++)
-                                pos[j] = tmpS.lastIndexOf(sp[j], colW[i]-1);
-                            int maxIndex = -1;
-                            for (int p : pos) {
-                                if (p > maxIndex && p < colW[i]) {
-                                    maxIndex = p;
-                                }
-                            }
-                            if(maxIndex == -1)
-                                maxIndex = colW[i];
-                            else
-                                maxIndex++;
-                            remainingString.put(i, tmpS.substring(maxIndex));
-                            tmpS = tmpS.substring(0, maxIndex);
-                        }
-                        System.out.print("|" + tmpS + " ".repeat(colW[i]-tmpS.length()));
-                    }
-                    System.out.println("|");
+
+                    // start printing
+                    // copying from row to a hashmap
+                    HashMap<Integer, String> remainingString = new HashMap<Integer, String>();
+                    for(int i=0; i<columnsNumber; i++)
+                        remainingString.put(i, row.get(i)==null?"":row.get(i));
                     while(!remainingString.isEmpty()){
                         for(int i=0; i<columnsNumber; i++){
-                            if(!remainingString.containsKey(i)){
-                                System.out.print("|" + " ".repeat(colW[i]));
-                                continue;
+                            if(remainingString.containsKey(i)){ // move the string in map to tmp
+                                tmpS = remainingString.get(i);
+                                remainingString.remove(i);
+                            }else{
+                                tmpS = "";
                             }
-                            String tmpS = remainingString.get(i);
-                            remainingString.remove(i);
+
+                            // cut the string if the length is too long
                             if(tmpS.length()>colW[i]){
-                                char[] sp = {' ', ',', '-'};
+                                char[] sp = {' ', ',', '-'};    // preferred seperator to try not to cut the words in middle
                                 int[] pos = new int[sp.length];
                                 for(int j=0; j<sp.length; j++)
                                     pos[j] = tmpS.lastIndexOf(sp[j], colW[i]-1);
                                 int maxIndex = -1;
-                                for (int p : pos) {
+                                for (int p : pos) { // locate the preferred seperator
                                     if (p > maxIndex && p < colW[i]) {
                                         maxIndex = p;
                                     }
                                 }
-                                if(maxIndex == -1)
+                                if(maxIndex == -1)  // cut the string in max length if no preferred seperator found
                                     maxIndex = colW[i];
                                 else
-                                    maxIndex++;
+                                    maxIndex++; // the location of cutting is one char after pos
+
+                                // put back the remaining into the map
                                 remainingString.put(i, tmpS.substring(maxIndex));
-                                tmpS = tmpS.substring(0, maxIndex);
+                                tmpS = tmpS.substring(0, maxIndex); // the string to print
                             }
+                            // print the data
                             System.out.print("|" + tmpS + " ".repeat(colW[i]-tmpS.length()));
                         }
-                        System.out.println("|");
+                        System.out.println("|");    // end of one row
                     }
+
+                    // TODO: test error ^:new, v:original (pair with that above)
+                    
+                    // for(int i=0; i<columnsNumber; i++){
+                    //     String tmpS = row.get(i);
+                    //     if(tmpS==null)
+                    //         tmpS = "";
+                    //     if(tmpS.length()>colW[i]){  // cut the string if the length is too long
+                    //         char[] sp = {' ', ',', '-'};    // preferred seperator to try not to cut the words in middle
+                    //         int[] pos = new int[sp.length];
+                    //         for(int j=0; j<sp.length; j++)
+                    //             pos[j] = tmpS.lastIndexOf(sp[j], colW[i]-1);
+                    //         int maxIndex = -1;
+                    //         for (int p : pos) { // locate the preferred seperator
+                    //             if (p > maxIndex && p < colW[i]) {
+                    //                 maxIndex = p;
+                    //             }
+                    //         }
+                    //         if(maxIndex == -1)  // cut the string in max length if no preferred seperator found
+                    //             maxIndex = colW[i];
+                    //         else
+                    //             maxIndex++; // the location of cutting is one char after pos
+                    //         remainingString.put(i, tmpS.substring(maxIndex));
+                    //         tmpS = tmpS.substring(0, maxIndex);
+                    //     }
+                    //     System.out.print("|" + tmpS + " ".repeat(colW[i]-tmpS.length()));
+                    // }
+                    // System.out.println("|");
+
+                    // // after printing the first row, 
+                    // while(!remainingString.isEmpty()){
+                    //     for(int i=0; i<columnsNumber; i++){
+                    //         if(!remainingString.containsKey(i)){
+                    //             System.out.print("|" + " ".repeat(colW[i]));
+                    //             continue;
+                    //         }
+                    //         String tmpS = remainingString.get(i);
+                    //         remainingString.remove(i);
+                    //         if(tmpS.length()>colW[i]){
+                    //             char[] sp = {' ', ',', '-'};
+                    //             int[] pos = new int[sp.length];
+                    //             for(int j=0; j<sp.length; j++)
+                    //                 pos[j] = tmpS.lastIndexOf(sp[j], colW[i]-1);
+                    //             int maxIndex = -1;
+                    //             for (int p : pos) {
+                    //                 if (p > maxIndex && p < colW[i]) {
+                    //                     maxIndex = p;
+                    //                 }
+                    //             }
+                    //             if(maxIndex == -1)
+                    //                 maxIndex = colW[i];
+                    //             else
+                    //                 maxIndex++;
+                    //             remainingString.put(i, tmpS.substring(maxIndex));
+                    //             tmpS = tmpS.substring(0, maxIndex);
+                    //         }
+                    //         System.out.print("|" + tmpS + " ".repeat(colW[i]-tmpS.length()));
+                    //     }
+                    //     System.out.println("|");
+                    // }
+
                     if(r==0){   // print middle +-------+--------+...
                         for(int w : colW)
                             System.out.print("+" + "-".repeat(w));
                         System.out.println("+");
                     }
                 }
-                // print bottom +-------+--------+...
+                // print bottom +-------+--------+... (after all data)
                 for(int w : colW)
                     System.out.print("+" + "-".repeat(w));
                 System.out.println("+\n");
-
+                
+                // print page number and user options (center at 80)
                 String pageS = "Page " + page + "/" + maxPage;
                 System.out.print(page>1?"1. Previous Page  ":" ".repeat(18)); 
                 System.out.print(" ".repeat(22-(pageS.length()+1)/2>0?22-(pageS.length()+1)/2:0));
@@ -406,7 +518,7 @@ public class Main {
                 System.out.println(page<maxPage?"  2. Next Page":" ");
                 System.out.println("3. Finish" + " ".repeat(23) + "4. Back to Menu" + " ".repeat(15) + "5. Quit the System\n");
                 
-                switch(input){
+                switch(input){  //error message for wrong input
                     case 0:
                         System.out.print(">>> Please Enter Your Query: ");
                         break;
@@ -419,34 +531,38 @@ public class Main {
                         input = 0;
                         break;
                 }
+
+                // get user input
                 try{
                     input = myScanner.nextInt();
                 }catch(Exception e){
                     input = -1;
                     continue;
                 }
+
+                // process user input
                 switch(input){
-                    case 1:
+                    case 1: // previous page
                         input = page>1 ? 0 : 2;
                         if(page>1)
                             page--;
                         break;
-                    case 2:
+                    case 2: // next page
                         input = page<maxPage ? 0 : 2;
                         if(page<maxPage)
                             page++;
                         break;
-                    case 3:
+                    case 3: // finish (exit)
                         break;
-                    case 4:
+                    case 4: // back to menu
                         return 2;
-                    case 5:
+                    case 5: // quit the program
                         return 3;
-                    default:
+                    default:    // others -> unknow(wrong) input
                         input = 2;
                 }
             }
-        }catch(Exception x){
+        }catch(Exception x){    // exception not expected (print out for debug)
             x.printStackTrace();
             System.err.println(x);
             Scanner myScanner = new Scanner(System.in);
@@ -459,12 +575,12 @@ public class Main {
     public static void main(String[] args){
         int page = 0;
         int error = 0;
-        connectDatabase();
-        while(page != 4){
+        connectDatabase();  // try to connect at the begining, if fail, need to go to 1-1. Connect to Database and Create Missing Tables
+        while(page != 4){   // page==4 -> quit the program
             showMenu(page);
 
             // Read input
-            switch(error){
+            switch(error){  // print error message
                 case 0:
                     System.out.println();
                     break;
@@ -477,6 +593,8 @@ public class Main {
                     error = 0;
                     break;
             }
+
+            // read input
             System.out.print(">>> Please Enter Your Query: ");
             int input = -1;
             Scanner myScanner = new Scanner(System.in);
@@ -487,9 +605,10 @@ public class Main {
                 continue;
             }
 
-            // process user choice: switch page or call function
+            // process user choice: switch page OR call function OR process
             switch(page){
-                case 0: // page 0 (main menu)
+                // page 0 (main menu)
+                case 0:
                     switch(input){
                         case 1: page = 1; break;
                         case 2: page = 2; break;
@@ -499,7 +618,9 @@ public class Main {
                             error = 2;
                     } 
                     break;
-                case 1: // page 1 (Database Initialization)
+                
+                // page 1 (Database Initialization)
+                case 1:
                     switch(input){
                         case 1: // Login to Database and Create Missing Tables
                             connectDatabase();
@@ -509,18 +630,24 @@ public class Main {
                             break;
                         case 3: // Delete All Records
                             clrscr();
+                            
+                            // ban if not connected
                             if(!connected){
                                 clrscr();
                                 showMessage("Fail to Connect to Database");
                                 continue;
                             }
+                            
+                            // ask for double check
                             System.out.println("Caution: Deleting ALL records at Books, Customers, and Orders");
                             System.out.println("This action cannot be recovered.");
                             System.out.print("Proceed? (Enter y|Y for Yes, any others for No): ");
+
+                            // read input
                             Scanner myScanner2 = new Scanner(System.in);
                             String in = myScanner2.nextLine();
                             if(in.equals("Y") || in.equals("y")){
-                                try{
+                                try{    // drop the whole table then create it back to delete all record
                                     Statement stmt = conn.createStatement();
                                     for(int i = tableName.length-1; i>=0; i--)
                                         stmt.executeUpdate("DROP TABLE " + tableName[i]);
@@ -528,8 +655,8 @@ public class Main {
                                         stmt.executeUpdate("CREATE TABLE " + tname + " " + tableStruct.get(tname));
                                     }
                                     showMessage("\nAll records has been deleted");
-                                }catch(Exception x){
-                                    showMessage("\nError while deleting records\n--- Disconnected to database ---");
+                                }catch(Exception x){    // if any exception catched, disconnect to database and force user to reconnect to solve the problem
+                                    showMessage("\nUnknown Error while deleting records\n--- Disconnected to database ---");
                                     connected = false;
                                 }
                             }
@@ -540,18 +667,24 @@ public class Main {
                         case 5: // Quit
                             page = 4;
                             break;
-                        default:
+                        default:    // wrong input
                             error = 2; 
                     }
                     break;
-                case 2: // page 2 (Customer Operation)
+                
+                // page 2 (Customer Operation)
+                case 2:
                     switch(input){
                         case 1: // Book Search
                             clrscr();
+
+                            // ban if not connected
                             if(!connected){
                                 showMessage("Fail to Connect to Database");
                                 continue;
                             }
+
+                            // ask user to input the search information
                             System.out.println("Book Searching\n");
                             System.out.println("Please enter the ISBN, Book Title and Author Name:");
                             System.out.println("(Leave it empty to not specify)");
@@ -563,6 +696,8 @@ public class Main {
                             title = myScanner2.nextLine();
                             System.out.print("Author Name: ");
                             aname = myScanner2.nextLine();
+
+                            // try to search the book and show the rs by showRs()
                             try{
                                 Statement stmt = conn.createStatement();
                                 ResultSet rs = stmt.executeQuery(
@@ -575,9 +710,9 @@ public class Main {
                                     page = 0;
                                 if(r==3)
                                     page = 4; 
-                            }catch(Exception e){
-                                e.printStackTrace();
-                                System.err.println(e);
+                            }catch(Exception e){    // if any exception catched, disconnect to database and force user to reconnect to solve the problem
+                                showMessage("\nUnknown Error while searching books\n--- Disconnected to database ---");
+                                connected = false;
                             }
                             break;
                         case 2: // Place Order
@@ -585,15 +720,21 @@ public class Main {
                             break;
                         case 3: // Check History Orders
                             clrscr();
+                            
+                            // ban if not connected
                             if(!connected){
                                 showMessage("Fail to Connect to Database");
                                 continue;
                             }
+                            
+                            // ask user to input uid
                             System.out.println("Checking History Orders\n");
                             String uid;
                             Scanner myScanner3 = new Scanner(System.in);
                             System.out.print("Please enter your UID: ");
                             uid = myScanner3.nextLine();
+
+                            // show the rs by showRs() (even rs == empty set)
                             try{
                                 Statement stmt = conn.createStatement();
                                 ResultSet rs = stmt.executeQuery(
@@ -607,9 +748,9 @@ public class Main {
                                     page = 0;
                                 if(r==3)
                                     page = 4; 
-                            }catch(Exception e){
-                                e.printStackTrace();
-                                System.err.println(e);
+                            }catch(Exception e){    // if any exception catched, disconnect to database and force user to reconnect to solve the problem
+                                showMessage("\nUnknown Error while checking history orders\n--- Disconnected to database ---");
+                                connected = false;
                             }
                             break;
                         case 4: // Back to Menu
@@ -618,18 +759,24 @@ public class Main {
                         case 5: // Quit
                             page = 4;
                             break;
-                        default:
+                        default:    // wrong input
                             error = 2; 
                     }
                     break;
-                case 3: // page 3 (Bookstore Operation)
+
+                // page 3 (Bookstore Operation)
+                case 3: 
                     switch(input){
-                        case 1: // Order Update
+                        case 1: // Order Update (one way update: ordered -> shipped -> received)
                             clrscr();
+
+                            // ban if not connected
                             if(!connected){
                                 showMessage("Fail to Connect to Database");
                                 continue;
                             }
+
+                            // ask user to specify the order want to update
                             System.out.println("Order Updating\n");
                             System.out.println("Please enter the OID and the Order ISBN:");
                             System.out.println("(Leave ISBN empty to change all status in the order)");
@@ -639,10 +786,15 @@ public class Main {
                             oid = myScanner2.nextLine();
                             System.out.print("ISBN: ");
                             isbn = myScanner2.nextLine();
+
+                            // check different conditon and throw the message wanted to print
                             try{
+                                // check if oid empty
                                 if(oid.equals("")){
                                     throw new Exception("\nOID cannot be empty");
                                 }
+
+                                // check if oid exist
                                 Statement stmt = conn.createStatement();
                                 ResultSet rs = stmt.executeQuery(
                                     "SELECT *  " + 
@@ -651,7 +803,9 @@ public class Main {
                                 if(!rs.next()){
                                     throw new Exception("\nOID " + oid + " not found");
                                 }
-                                if(!isbn.equals("")){   // max one record -> check if isbn exist
+
+                                // check if isbn empty: two conditions:
+                                if(!isbn.equals("")){   // not empty -> at most one record to update -> check if that record exist
                                     rs = stmt.executeQuery(
                                         "SELECT * " + 
                                         "FROM Ordering " + 
@@ -659,13 +813,15 @@ public class Main {
                                     if(!rs.next()){
                                         throw new Exception("\nBook isbn: " + isbn + " not found in OID: " + oid);
                                     }
-                                }else{  // more than one record -> check if all status equal
+                                }else{  // isbn empty -> more than one record to update -> check if all status equal
                                     rs = stmt.executeQuery(
                                         "SELECT COUNT(DISTINCT ShippingStatus) AS Num " + 
                                         "FROM Ordering " + 
                                         "WHERE oid = '" + oid + "' ");
                                     rs.next();
-                                    if(rs.getInt("Num") > 1){
+
+                                    // if there are more than one status in a single order, ban and ask if show
+                                    if(rs.getInt("Num") > 1){   // more than one status, not updating
                                         System.out.println("\nThere are more than one status in OID: " + oid);
                                         System.out.println("Update failed. Show records? (Enter y|Y for Yes, any others for No)");
                                         Scanner myScanner3 = new Scanner(System.in);
@@ -682,9 +838,12 @@ public class Main {
                                             if(r==3)
                                                 page = 4; 
                                         }
+                                        // after showing OR no need to show, break out by throwing an exception (empty message to not print)
                                         throw new Exception("");
                                     }
                                 }
+
+                                // load the status that going to update
                                 rs = stmt.executeQuery(
                                         "SELECT ShippingStatus AS status " + 
                                         "FROM Ordering " + 
@@ -692,53 +851,67 @@ public class Main {
                                         (isbn.equals("")?"":("AND orderIsbn = '" + isbn + "' ")));
                                 rs.next();
                                 String cStatus = rs.getString("status");
+
+                                // print current status
                                 System.out.println("\nCurrent status: '" + cStatus + "'");
+
+                                // load options
                                 ArrayList<String> options = new ArrayList<String>();
                                 switch(cStatus){
-                                    case "ordered":
+                                    case "ordered": // can update to 'shipped' OR 'received'
                                         options.add("shipped");
-                                    case "shipped":
+                                    case "shipped": // can only update to 'received'
                                         options.add("received");
                                         options.add("Cancel (Not updating)");
                                         break;
-                                    default:    // cannot update "recieved"
+                                    default:    // cannot update 'recieved' (OR any other unknown status)
                                         throw new Exception("\nUpdate of current status '" + cStatus + "' is not supported");
                                 }
+
+                                // print options
                                 System.out.println("Update to: ");
                                 for (int i = 0; i < options.size(); i++) {
                                     System.out.println("> " + (i+1) + ". " + (i<options.size()-1?"'":"")  + options.get(i) + (i<options.size()-1?"'":""));
                                 }
+
+                                // ask input
                                 System.out.print("\n>>> Please Enter Your Option: ");
                                 Scanner myScanner3 = new Scanner(System.in);
                                 int input2 = -1;
                                 try{
-                                    input2 = myScanner3.nextInt();
+                                    input2 = myScanner3.nextInt();  // will have exception for wrong input e.g. abc, #$%
                                     input2--;
-                                    if(options.get(input2).equals("Cancel (Not updating)"))
-                                        throw new Exception("");
-                                    cStatus = options.get(input2);
+                                    if(options.get(input2).equals("Cancel (Not updating)")) // will have exception for wrong input e.g. 0, -123
+                                        throw new Exception("");    // cancelling normally, no message printed
+                                    cStatus = options.get(input2);  // normal input -> save the status to update into cStatus
                                 }catch(Exception x){
-                                    if(x.getMessage().equals(""))
+                                    if(x.getMessage().equals(""))   // continue throw exception for the normal cancel
                                         throw new Exception("");
-                                    else
+                                    else    // throw exception for wrong input
                                         throw new Exception("\nUnknow input. Cancelling (No updates)");
                                 }
+
+                                // update the status to new status
                                 stmt.executeUpdate("UPDATE Ordering " + 
                                                     "SET ShippingStatus = '" + cStatus + "' " + 
                                                     "WHERE OID = '" + oid + "' " + 
                                                     (isbn.equals("")?"":("AND orderIsbn = '" + isbn + "' ")));
-                                throw new Exception("\nStatus updated");
-                            }catch(Exception e){
-                                if(!e.getMessage().equals(""))
+                            }catch(Exception e){    // handle and print the error message thrown before
+                                if(!e.getMessage().equals(""))  // (empty message to not print)
                                     showMessage(e.getMessage());
                             }
+                            showMessage("\nStatus updated");
                             break;
                         case 2: // Order Query
                             clrscr();
+
+                            // ban if not connected
                             if(!connected){
                                 showMessage("Fail to Connect to Database");
                                 continue;
                             }
+
+                            // ask for the status to show
                             System.out.println("Order Querying\n");
                             System.out.println("Orders in shipping status:");
                             System.out.println("> 1. ordered");
@@ -767,6 +940,8 @@ public class Main {
                                 showMessage("\nError: Unknown input received");
                                 continue;
                             }
+
+                            // query and show rs
                             try{
                                 Statement stmt = conn.createStatement();
                                 ResultSet rs = stmt.executeQuery(
@@ -780,13 +955,15 @@ public class Main {
                                     page = 0;
                                 if(r==3)
                                     page = 4; 
-                            }catch(Exception e){
-                                e.printStackTrace();
-                                System.err.println(e);
+                            }catch(Exception e){    // if any exception catched, disconnect to database and force user to reconnect to solve the problem
+                                showMessage("\nUnknown Error while querying orders\n--- Disconnected to database ---");
+                                connected = false;
                             }
                             break;
                         case 3: // Check Most Popular Books
                             clrscr();
+                            
+                            // ban if not connected
                             if(!connected){
                                 showMessage("Fail to Connect to Database");
                                 continue;
@@ -806,9 +983,9 @@ public class Main {
                                     page = 0;
                                 if(r==3)
                                     page = 4; 
-                            }catch(Exception e){
-                                e.printStackTrace();
-                                System.err.println(e);
+                            }catch(Exception e){    // if any exception catched, disconnect to database and force user to reconnect to solve the problem
+                                showMessage("\nUnknown Error while checking most popular books\n--- Disconnected to database ---");
+                                connected = false;
                             }
                             break;
                         case 4: // Back to Menu
@@ -817,14 +994,14 @@ public class Main {
                         case 5: // Quit
                             page = 4;
                             break;
-                        default:
+                        default:    // wrong input
                             error = 2; 
                     }
                     break;
-
+                // no default all page are included (page==4 -> quit program) and won't go out of expect
             }
-
         }
+        clrscr();
         System.out.println("Bye");
     }
 }
