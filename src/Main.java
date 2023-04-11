@@ -103,7 +103,7 @@ public class Main {
         if(!connected){
             System.out.println("--Fail to Connect to Database--");
         }else{
-            for(int i = 0; i<tableName.size(); i++){
+            for(int i = 0; i<tableName.length; i++){
                 int count = -1;
                 try{
                     Statement stmt = conn.createStatement();
@@ -125,7 +125,7 @@ public class Main {
                             System.out.print("Orders (");
                             break;
                     }
-                    System.out.print(count + ")" + (i<tableName.size()-1 ? ", " : " "));
+                    System.out.print(count + ")" + (i<tableName.length-1 ? ", " : " "));
                 }
             }
             System.out.println();
@@ -386,7 +386,7 @@ public class Main {
                 //print data(records)
                 // HashMap<Integer, String> remainingString = new HashMap<Integer, String>();   // TODO: test error(same with that below)
                 for(int r=0; r<=numberOfOnePage; r++){
-                    ArrayList<String> row;
+                    ArrayList<String> row = new ArrayList<String>();
                     // load the print data
                     if(r==0){   // r==0 -> column label
                         row = buffer.get(0);
@@ -405,7 +405,8 @@ public class Main {
                         remainingString.put(i, row.get(i)==null?"":row.get(i));
                     while(!remainingString.isEmpty()){
                         for(int i=0; i<columnsNumber; i++){
-                            if(remainingString.containsKey(i)){ // move the string in map to tmp
+                            String tmpS;
+                            if(remainingString.containsKey(i)){ // move the string in map to tmpS
                                 tmpS = remainingString.get(i);
                                 remainingString.remove(i);
                             }else{
