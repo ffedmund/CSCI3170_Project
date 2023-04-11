@@ -14,22 +14,22 @@ public class Main {
     static final String[] tableName = {"Book", "Customer", "Ordering"};
     static final HashMap<String, String> tableStruct = new HashMap<String, String>();
     static {
-        tableStruct.put("Book", "(ISBN CHAR(13) not NULL, " +   //TODO: more detail?
-                                    " Title VARCHAR(100), " + 
-                                    " Authors VARCHAR(50), " + 
-                                    " Price INTEGER, " + 
-                                    " InventoryQuantity INTEGER, " +
+        tableStruct.put("Book", "(ISBN CHAR(13) NOT NULL, " +   //TODO: more detail?
+                                    " Title VARCHAR(100) NOT NULL, " + 
+                                    " Authors VARCHAR(50) NOT NULL, " + 
+                                    " Price INTEGER UNSIGNED NOT NULL, " + 
+                                    " InventoryQuantity INTEGER UNSIGNED NOT NULL, " +
                                     " PRIMARY KEY (ISBN))");
-        tableStruct.put("Customer", "(UID CHAR(10) not NULL, " +   //TODO: more detail?
-                                        " Name VARCHAR(50), " + 
-                                        " Address VARCHAR(200), " + 
+        tableStruct.put("Customer", "(UID CHAR(10) NOT NULL, " +   //TODO: more detail?
+                                        " Name VARCHAR(50) NOT NULL, " + 
+                                        " Address VARCHAR(200) NOT NULL, " + 
                                         " PRIMARY KEY (UID))");
-        tableStruct.put("Ordering", "(OID CHAR(8) not NULL, " +   //TODO: more detail?
-                                        " UID CHAR(10) not NULL, " +
+        tableStruct.put("Ordering", "(OID CHAR(8) NOT NULL, " +   //TODO: more detail?
+                                        " UID CHAR(10) NOT NULL, " +
                                         " OrderISBN CHAR(13) NOT NULL, " + 
-                                        " OrderDate DATE, " + 
-                                        " OrderQuantity INTEGER, " + 
-                                        " ShippingStatus VARCHAR(8), " + 
+                                        " OrderDate DATE NOT NULL, " + 
+                                        " OrderQuantity INTEGER UNSIGNED NOT NULL, " + 
+                                        " ShippingStatus VARCHAR(8) NOT NULL, " + 
                                         " PRIMARY KEY (OID, OrderISBN), " + 
                                         " FOREIGN KEY (UID) REFERENCES Customer(UID), " + 
                                         " FOREIGN KEY (OrderISBN) REFERENCES Book(ISBN))");
@@ -167,10 +167,10 @@ public class Main {
         if(host.equals("")) // default value of host if nothing entered
             host = "localhost";
 
-        System.out.print("Enter your Database Name(press Enter for defalut name: BOOKORDING)(create if not exist): ");
+        System.out.print("Enter your Database Name(press Enter for defalut name: BOOKORDERING)(create if not exist): ");
         dbname = myScanner.nextLine();
         if(dbname.equals(""))   // default value of dbname if nothing entered
-            dbname = "BOOKORDING";
+            dbname = "BOOKORDERING";
 
         System.out.print("Enter your user name: ");
         username = myScanner.nextLine();
@@ -384,14 +384,13 @@ public class Main {
                 System.out.println("+");
 
                 //print data(records)
-                // HashMap<Integer, String> remainingString = new HashMap<Integer, String>();   // TODO: test error(same with that below)
                 for(int r=0; r<=numberOfOnePage; r++){
                     ArrayList<String> row = new ArrayList<String>();
                     // load the print data
                     if(r==0){   // r==0 -> column label
                         row = buffer.get(0);
                     }else{  // load the required record in buffer to row
-                        if((page-1)*numberOfOnePage + r >= buffer.size())   // TODO: test if error
+                        if((page-1)*numberOfOnePage + r >= buffer.size())
                             for (int i = 1; i <= columnsNumber; i++)
                                 row.add("");
                         else
@@ -440,72 +439,14 @@ public class Main {
                         System.out.println("|");    // end of one row
                     }
 
-                    // TODO: test error ^:new, v:original (pair with that above)
-                    
-                    // for(int i=0; i<columnsNumber; i++){
-                    //     String tmpS = row.get(i);
-                    //     if(tmpS==null)
-                    //         tmpS = "";
-                    //     if(tmpS.length()>colW[i]){  // cut the string if the length is too long
-                    //         char[] sp = {' ', ',', '-'};    // preferred seperator to try not to cut the words in middle
-                    //         int[] pos = new int[sp.length];
-                    //         for(int j=0; j<sp.length; j++)
-                    //             pos[j] = tmpS.lastIndexOf(sp[j], colW[i]-1);
-                    //         int maxIndex = -1;
-                    //         for (int p : pos) { // locate the preferred seperator
-                    //             if (p > maxIndex && p < colW[i]) {
-                    //                 maxIndex = p;
-                    //             }
-                    //         }
-                    //         if(maxIndex == -1)  // cut the string in max length if no preferred seperator found
-                    //             maxIndex = colW[i];
-                    //         else
-                    //             maxIndex++; // the location of cutting is one char after pos
-                    //         remainingString.put(i, tmpS.substring(maxIndex));
-                    //         tmpS = tmpS.substring(0, maxIndex);
-                    //     }
-                    //     System.out.print("|" + tmpS + " ".repeat(colW[i]-tmpS.length()));
-                    // }
-                    // System.out.println("|");
-
-                    // // after printing the first row, 
-                    // while(!remainingString.isEmpty()){
-                    //     for(int i=0; i<columnsNumber; i++){
-                    //         if(!remainingString.containsKey(i)){
-                    //             System.out.print("|" + " ".repeat(colW[i]));
-                    //             continue;
-                    //         }
-                    //         String tmpS = remainingString.get(i);
-                    //         remainingString.remove(i);
-                    //         if(tmpS.length()>colW[i]){
-                    //             char[] sp = {' ', ',', '-'};
-                    //             int[] pos = new int[sp.length];
-                    //             for(int j=0; j<sp.length; j++)
-                    //                 pos[j] = tmpS.lastIndexOf(sp[j], colW[i]-1);
-                    //             int maxIndex = -1;
-                    //             for (int p : pos) {
-                    //                 if (p > maxIndex && p < colW[i]) {
-                    //                     maxIndex = p;
-                    //                 }
-                    //             }
-                    //             if(maxIndex == -1)
-                    //                 maxIndex = colW[i];
-                    //             else
-                    //                 maxIndex++;
-                    //             remainingString.put(i, tmpS.substring(maxIndex));
-                    //             tmpS = tmpS.substring(0, maxIndex);
-                    //         }
-                    //         System.out.print("|" + tmpS + " ".repeat(colW[i]-tmpS.length()));
-                    //     }
-                    //     System.out.println("|");
-                    // }
-
-                    if(r==0){   // print middle +-------+--------+...
+                    // print middle +-------+--------+...
+                    if(r==0){
                         for(int w : colW)
                             System.out.print("+" + "-".repeat(w));
                         System.out.println("+");
                     }
                 }
+
                 // print bottom +-------+--------+... (after all data)
                 for(int w : colW)
                     System.out.print("+" + "-".repeat(w));
@@ -656,7 +597,7 @@ public class Main {
                                         stmt.executeUpdate("CREATE TABLE " + tname + " " + tableStruct.get(tname));
                                     }
                                     showMessage("\nAll records has been deleted");
-                                }catch(Exception x){    // if any exception catched, disconnect to database and force user to reconnect to solve the problem
+                                }catch(Exception x){    // unexceped exception catched, disconnect to database and force user to reconnect to solve the problem
                                     showMessage("\nUnknown Error while deleting records\n--- Disconnected to database ---");
                                     connected = false;
                                 }
@@ -711,7 +652,7 @@ public class Main {
                                     page = 0;
                                 if(r==3)
                                     page = 4; 
-                            }catch(Exception e){    // if any exception catched, disconnect to database and force user to reconnect to solve the problem
+                            }catch(Exception e){    // unexceped exception catched, disconnect to database and force user to reconnect to solve the problem
                                 showMessage("\nUnknown Error while searching books\n--- Disconnected to database ---");
                                 connected = false;
                             }
@@ -733,6 +674,12 @@ public class Main {
                             System.out.print("Please enter your UID: ");    //TODO: test error: empty uid
                             uid2 = myScanner4.nextLine();
                             
+                            // check if empty
+                            if(uid2.equals("")){
+                                showMessage("\nUID cannot be empty");
+                                continue;
+                            }
+
                             // check if uid exist
                             try{
                                 Statement stmt = conn.createStatement();
@@ -744,10 +691,11 @@ public class Main {
                                     throw new Exception();
                                 }
                             }catch(Exception e){
-                                System.out.println();
                                 showMessage("\nUID " + uid2 + " not found");
                                 continue;
                             }
+
+
 
                             // find max oid -> new = max oid+1
                             // turn off auto commet
@@ -788,7 +736,7 @@ public class Main {
                                     page = 0;
                                 if(r==3)
                                     page = 4; 
-                            }catch(Exception e){    // if any exception catched, disconnect to database and force user to reconnect to solve the problem
+                            }catch(Exception e){    // unexceped exception catched, disconnect to database and force user to reconnect to solve the problem
                                 showMessage("\nUnknown Error while checking history orders\n--- Disconnected to database ---");
                                 connected = false;
                             }
@@ -939,6 +887,7 @@ public class Main {
                             }catch(Exception e){    // handle and print the error message thrown before
                                 if(!e.getMessage().equals(""))  // (empty message to not print)
                                     showMessage(e.getMessage());
+                                continue;
                             }
                             showMessage("\nStatus updated");
                             break;
@@ -995,7 +944,7 @@ public class Main {
                                     page = 0;
                                 if(r==3)
                                     page = 4; 
-                            }catch(Exception e){    // if any exception catched, disconnect to database and force user to reconnect to solve the problem
+                            }catch(Exception e){    // unexceped exception catched, disconnect to database and force user to reconnect to solve the problem
                                 showMessage("\nUnknown Error while querying orders\n--- Disconnected to database ---");
                                 connected = false;
                             }
@@ -1023,7 +972,7 @@ public class Main {
                                     page = 0;
                                 if(r==3)
                                     page = 4; 
-                            }catch(Exception e){    // if any exception catched, disconnect to database and force user to reconnect to solve the problem
+                            }catch(Exception e){    // unexceped exception catched, disconnect to database and force user to reconnect to solve the problem
                                 showMessage("\nUnknown Error while checking most popular books\n--- Disconnected to database ---");
                                 connected = false;
                             }
