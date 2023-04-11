@@ -14,22 +14,22 @@ public class Main {
     static final String[] tableName = {"Book", "Customer", "Ordering"};
     static final HashMap<String, String> tableStruct = new HashMap<String, String>();
     static {
-        tableStruct.put("Book", "(ISBN CHAR(13) NOT NULL, " +   //TODO: more detail?
-                                    " Title VARCHAR(100) NOT NULL, " + 
-                                    " Authors VARCHAR(50) NOT NULL, " + 
+        tableStruct.put("Book", "(ISBN CHAR(13) NOT NULL CHECK(ISBN REGEXP '^[0-9\\-]+$' AND ISBN LIKE '_-____-____-_'), " +
+                                    " Title VARCHAR(100) NOT NULL CHECK(Title NOT REGEXP '[%_]'), " + 
+                                    " Authors VARCHAR(50) NOT NULL CHECK(Authors NOT REGEXP '[%_]'), " + 
                                     " Price INTEGER UNSIGNED NOT NULL, " + 
                                     " InventoryQuantity INTEGER UNSIGNED NOT NULL, " +
                                     " PRIMARY KEY (ISBN))");
-        tableStruct.put("Customer", "(UID CHAR(10) NOT NULL, " +   //TODO: more detail?
-                                        " Name VARCHAR(50) NOT NULL, " + 
-                                        " Address VARCHAR(200) NOT NULL, " + 
+        tableStruct.put("Customer", "(UID CHAR(10) NOT NULL, " +   
+                                        " Name VARCHAR(50) NOT NULL CHECK(Name NOT REGEXP '[%_]'), " + 
+                                        " Address VARCHAR(200) NOT NULL CHECK(Address NOT REGEXP '[%_]'), " + 
                                         " PRIMARY KEY (UID))");
-        tableStruct.put("Ordering", "(OID CHAR(8) NOT NULL, " +   //TODO: more detail?
+        tableStruct.put("Ordering", "(OID CHAR(8) NOT NULL CHECK(OID REGEXP '^[0-9]+$' AND OID LIKE '________'), " + 
                                         " UID CHAR(10) NOT NULL, " +
                                         " OrderISBN CHAR(13) NOT NULL, " + 
                                         " OrderDate DATE NOT NULL, " + 
                                         " OrderQuantity INTEGER UNSIGNED NOT NULL, " + 
-                                        " ShippingStatus VARCHAR(8) NOT NULL, " + 
+                                        " ShippingStatus VARCHAR(8) NOT NULL CHECK(ShippingStatus IN ('ordered','shipped','received')), " + 
                                         " PRIMARY KEY (OID, OrderISBN), " + 
                                         " FOREIGN KEY (UID) REFERENCES Customer(UID), " + 
                                         " FOREIGN KEY (OrderISBN) REFERENCES Book(ISBN))");
@@ -671,7 +671,7 @@ public class Main {
                             System.out.println("Placing Order\n");
                             String uid2;
                             Scanner myScanner4 = new Scanner(System.in);
-                            System.out.print("Please enter your UID: ");    //TODO: test error: empty uid
+                            System.out.print("Please enter your UID: ");
                             uid2 = myScanner4.nextLine();
                             
                             // check if empty
