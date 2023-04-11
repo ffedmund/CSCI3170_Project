@@ -717,7 +717,46 @@ public class Main {
                             }
                             break;
                         case 2: // Place Order
-                            // TODO
+                            // TODO: test error
+                            clrscr();
+
+                            // ban if not connected
+                            if(!connected){
+                                showMessage("Fail to Connect to Database");
+                                continue;
+                            }
+
+                            // ask user to input the order information
+                            System.out.println("Placing Order\n");
+                            String uid2;
+                            Scanner myScanner4 = new Scanner(System.in);
+                            System.out.print("Please enter your UID: ");    //TODO: test error: empty uid
+                            uid2 = myScanner4.nextLine();
+                            
+                            // check if uid exist
+                            try{
+                                Statement stmt = conn.createStatement();
+                                ResultSet rs = stmt.executeQuery(
+                                    "SELECT *  " + 
+                                    "FROM Customer " + 
+                                    "WHERE uid = '" + uid2 + "' ");
+                                if(!rs.next()){
+                                    throw new Exception();
+                                }
+                            }catch(Exception e){
+                                System.out.println();
+                                showMessage("\nUID " + uid2 + " not found");
+                                continue;
+                            }
+
+                            // find max oid -> new = max oid+1
+                            // turn off auto commet
+                            // ask input isbn, quantity (while-loop) {check qty +ve, catch exception(isbn not exist)
+                            // empty both to End ording
+                            // (show all orders)(uid  oid in title, show isbn, bk title, Qty)
+                            // ask cancel or not -> roll back or not
+                            // turn on auto commet
+
                             break;
                         case 3: // Check History Orders
                             clrscr();
@@ -735,7 +774,7 @@ public class Main {
                             System.out.print("Please enter your UID: ");
                             uid = myScanner3.nextLine();
 
-                            // show the rs by showRs() (even rs == empty set)
+                            // show by calling showRs() (even rs is empty set)
                             try{
                                 Statement stmt = conn.createStatement();
                                 ResultSet rs = stmt.executeQuery(
