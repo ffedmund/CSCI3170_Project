@@ -1,4 +1,4 @@
-// cmd: java -cp .\mysql-connector-j-8.0.32\mysql-connector-j-8.0.32.jar;. Main
+// TODO delete: cmd: java -cp .\mysql-connector-j-8.0.32\mysql-connector-j-8.0.32.jar;. Main
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.Scanner;
@@ -662,7 +662,6 @@ public class Main {
                             }
                             break;
                         case 2: // Place Order
-                            // TODO: test error
                             clrscr();
 
                             // ban if not connected
