@@ -1,5 +1,6 @@
 // cmd: java -cp .\mysql-connector-j-8.0.32\mysql-connector-j-8.0.32.jar;. Main
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.Scanner;
 import java.util.HashMap;
 import java.util.List;
@@ -98,7 +99,7 @@ public class Main {
         
         // print header (title, date, database info.)
         System.out.println(content[page][0]);
-        System.out.println("\n + System Date: " + LocalDate.now()); // TODO: show currect time?
+        System.out.println("\n + System Date: " + LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))); // TODO: show currect time?
         System.out.print(" + Database Records: ");
         if(!connected){
             System.out.println("--Fail to Connect to Database--");
@@ -634,6 +635,9 @@ public class Main {
                             String isbn, title, aname;
                             System.out.print("ISBN: ");
                             isbn = myScanner2.nextLine();
+                            if(isbn.matches("\\d+") && isbn.length()==10)
+                                isbn = isbn.substring(0, 1) + "-" + isbn.substring(1, 5) + "-" + 
+                                        isbn.substring(5, 9) + "-" + isbn.substring(9);
                             System.out.print("Book Title: ");
                             title = myScanner2.nextLine();
                             System.out.print("Author Name: ");
@@ -691,20 +695,214 @@ public class Main {
                                     throw new Exception();
                                 }
                             }catch(Exception e){
-                                showMessage("\nUID " + uid2 + " not found");
+                                showMessage("\nUID '" + uid2 + "' not found");
+                                continue;
+                            }
+                            
+                            // find max oid, new oid = max+1
+                            String newOID = null;
+                            try{
+                                Statement stmt = conn.createStatement();
+                                ResultSet rs = stmt.executeQuery(
+                                    "SELECT MAX(OID) AS MaxOID " + 
+                                    "FROM Ordering ");
+                                rs.next();
+                                int oid = Integer.parseInt(rs.getString("MaxOID"));
+                                if(oid+1 > 99999999)
+                                    throw new Exception();
+                                newOID = Integer.toString(oid+1);
+                            }catch(Exception e){
+                                showMessage("\nOID is full\nPlease empty or try another database");
                                 continue;
                             }
 
+                            // turn off autocommit
+                            try{
+                                conn.setAutoCommit(false);
+                            }catch(Exception e){    // unexceped exception catched, disconnect to database and force user to reconnect to solve the problem
+                                showMessage("\nUnknown Error while searching books\n--- Disconnected to database ---");
+                                connected = false;
+                            }
+                            
+                            // ask input, check input
+                            String isbn2 = "0", qty = "0";
+                            while(!(isbn2.equals("") && qty.equals(""))){
+                                clrscr();
+                                System.out.println("\nUID: " + uid2 + " OID: " + newOID + "");
+                                System.out.println("Please enter the required book's ISBN and quantity needed: ");
+                                System.out.println("(Empty both of them to end ordering)");
+                                System.out.print("Book ISBN: ");
+                                isbn2 = myScanner4.nextLine();
+                                if(isbn2.matches("\\d+") && isbn2.length()==10)
+                                    isbn2 = isbn2.substring(0, 1) + "-" + isbn2.substring(1, 5) + "-" + 
+                                            isbn2.substring(5, 9) + "-" + isbn2.substring(9);
+                                System.out.print("Ordering quantity: ");
+                                qty = myScanner4.nextLine();
+                                
+                                // check stock, insert value(temp)
+                                if(!(isbn2.equals("") && qty.equals(""))){
+                                    try{
+                                        // check empty
+                                        if(isbn2.equals("") && !qty.equals(""))
+                                            throw new Exception("\nISBN cannot be empty (Empty the BOTH to end ordering)\nPlease try again");
+                                        if(!isbn2.equals("") && qty.equals(""))
+                                            throw new Exception("\nQuantity cannot be empty (Empty the BOTH to end ordering)\nPlease try again");
+                                        
+                                        // check isbn exist
+                                        Statement stmt = conn.createStatement();
+                                        ResultSet rs = stmt.executeQuery(
+                                            "SELECT InventoryQuantity AS Stock " + 
+                                            "FROM Book " + 
+                                            "WHERE isbn = '" + isbn2 + "' ");
+                                        if(!rs.next()){
+                                            throw new Exception("\nNo recorded books with ISBN: " + isbn2 + " in the system\nPlease try again");
+                                        }
+                                        int stock = rs.getInt("Stock");
 
+                                        // check qty input valid
+                                        if(!qty.matches("\\d+"))
+                                            throw new Exception("\nUnknow input for Ordering quantity\nPlease try again");
+                                        
+                                        // check enough inventory
+                                        int orderQty = Integer.parseInt(qty);
+                                        if(orderQty>stock)
+                                            throw new Exception("\nInventory(" + stock + ") not enough for the ordering(" + orderQty + ")\nPlease try again");
+                                        
+                                        // check qty input valid
+                                        if(orderQty<1)
+                                            throw new Exception("\nInvalid quantity\nPlease try again");
+                                        
+                                        // find if user ordered the same book in the same oid
+                                        rs = stmt.executeQuery(
+                                            "SELECT OrderQuantity AS OrdQ " + 
+                                            "FROM Ordering " + 
+                                            "WHERE OrderISBN = '" + isbn2 + "' AND oid = '" + newOID + "'");
+                                        if(rs.next()){  // yes -> updata record
+                                            System.out.println("\nBook repeated. The quantity is added to the previous record.");
+                                            stmt.executeUpdate(
+                                                "UPDATE Ordering SET OrderQuantity = OrderQuantity + " + orderQty +  
+                                                " WHERE OrderISBN = '" + isbn2 + "' AND oid = '" + newOID + "'"    
+                                            );
+                                        }else{  // no -> insert record
+                                            stmt.executeUpdate(
+                                                "INSERT INTO Ordering (OID, UID, OrderISBN, OrderDate, OrderQuantity, ShippingStatus) VALUES " + 
+                                                "('" + newOID + "', '" + uid2 + "', '" + isbn2 + "', '" + 
+                                                LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")) + "', " + orderQty + ", 'ordered')"    
+                                            );
+                                        }
 
-                            // find max oid -> new = max oid+1
-                            // turn off auto commet
-                            // ask input isbn, quantity (while-loop) {check qty +ve, catch exception(isbn not exist)
-                            // empty both to End ording
-                            // (show all orders)(uid  oid in title, show isbn, bk title, Qty)
-                            // ask cancel or not -> roll back or not
-                            // turn on auto commet
+                                        // reduce inventory
+                                        stmt.executeUpdate("UPDATE Book SET InventoryQuantity = InventoryQuantity - " + orderQty + 
+                                            " WHERE isbn = '" + isbn2 + "'"
+                                        );
+                                        showMessage("\nOrder recorded");
+                                    }catch(Exception x){
+                                        showMessage(x.getMessage());
+                                    }
+                                }
+                            }
 
+                            // after all record entered -> confirm
+                            int input2 = -1, price = -1;
+                            try{
+                                // check if empty order
+                                Statement stmt = conn.createStatement();
+                                ResultSet rs = stmt.executeQuery("SELECT * FROM Ordering WHERE Ordering.OID = '" + newOID + "' ");
+                                if(!rs.next()){
+                                    clrscr();
+                                    showMessage("\nNo order recorded");
+                                    continue;
+                                }
+
+                                // get the total price
+                                rs = stmt.executeQuery("SELECT SUM(Book.Price * Ordering.OrderQuantity) AS tPrice " + 
+                                    "FROM Ordering " + 
+                                    "JOIN Book ON Ordering.OrderISBN = Book.ISBN " + 
+                                    "WHERE Ordering.OID = '" + newOID + "' ");
+                                rs.next();
+                                price = rs.getInt("tPrice");
+                            }catch(Exception x){
+                                showMessage(x.getMessage());
+                                continue;
+                            }
+                                
+                            // ask for confirmation of the order
+                            while(input2 != 0){
+                                clrscr();
+                                System.out.println("Order confirmation\n");
+                                System.out.println("> 1. Show order");
+                                System.out.println("> 2. Confirm order (Total Price: " + price + ")");
+                                System.out.println("> 3. Cancel order");
+
+                                Scanner myScanner3 = new Scanner(System.in);
+                                System.out.print("\n>>> Please Enter Your Option: ");
+                                try{
+                                    input2 = myScanner3.nextInt();
+                                    if(input2<1 || input2>3)
+                                        throw new Exception("\nPlease choose from the options");
+                                }catch(Exception x){
+                                    showMessage(x.getMessage());
+                                    continue;
+                                }
+                                switch(input2){
+                                    case 1:
+                                        int r = 0;
+                                        try{
+                                            Statement stmt = conn.createStatement();
+                                            ResultSet rs = stmt.executeQuery(
+                                                "SELECT Ordering.OrderISBN AS ISBN, Book.Title AS 'Book Title', Ordering.OrderQuantity AS Ordered, " +
+                                                "Book.Price AS Price, (Book.Price * Ordering.OrderQuantity) AS Subtotal " +
+                                                "FROM Ordering " +
+                                                "JOIN Book ON Ordering.OrderISBN = Book.ISBN " +
+                                                "WHERE Ordering.OID = '" + newOID + "'"
+                                            );
+                                            int[] colW = {13, 50, 7, 5, 8};
+                                            r = showRs(rs, "Order detail  OID: '" + newOID + "'  Total: " + price, colW);
+                                            if(r==2||r==3){
+                                                conn.rollback();
+                                                conn.setAutoCommit(true);
+                                                input2 = 0;
+                                                clrscr();
+                                            }
+                                        }catch(Exception x){
+                                            showMessage(x.getMessage());
+                                            continue;
+                                        }
+                                        if(r==2){
+                                            page = 0;
+                                            showMessage("Order cancelled. Going back to Menu...");
+                                        }
+                                        if(r==3){
+                                            page = 4; 
+                                            showMessage("Order cancelled. Quiting the program...");
+                                        }
+                                        break;
+                                    case 2:
+                                        try{
+                                            conn.commit();
+                                            conn.setAutoCommit(true);
+                                        }catch(Exception x){
+                                            showMessage(x.getMessage());
+                                            continue;
+                                        }
+                                        input2 = 0;
+                                        clrscr();
+                                        showMessage("\nOrder Placed, OID: " + newOID);
+                                        break;
+                                    case 3:
+                                        try{
+                                            conn.rollback();
+                                            conn.setAutoCommit(true);
+                                        }catch(Exception x){
+                                            showMessage(x.getMessage());
+                                            continue;
+                                        }
+                                        input2 = 0;
+                                        clrscr();
+                                        showMessage("\nOrder cancelled");
+                                        break;
+                                }
+                            }
                             break;
                         case 3: // Check History Orders
                             clrscr();
@@ -774,6 +972,9 @@ public class Main {
                             oid = myScanner2.nextLine();
                             System.out.print("ISBN: ");
                             isbn = myScanner2.nextLine();
+                            if(isbn.matches("\\d+") && isbn.length()==10)
+                                isbn = isbn.substring(0, 1) + "-" + isbn.substring(1, 5) + "-" + 
+                                        isbn.substring(5, 9) + "-" + isbn.substring(9);
 
                             // check different conditon and throw the message wanted to print
                             try{
@@ -799,7 +1000,7 @@ public class Main {
                                         "FROM Ordering " + 
                                         "WHERE oid = '" + oid + "' AND orderIsbn = '" + isbn + "' ");
                                     if(!rs.next()){
-                                        throw new Exception("\nBook isbn: " + isbn + " not found in OID: " + oid);
+                                        throw new Exception("\nBook ISBN: " + isbn + " not found in OID: " + oid);
                                     }
                                 }else{  // isbn empty -> more than one record to update -> check if all status equal
                                     rs = stmt.executeQuery(
