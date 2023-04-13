@@ -1,0 +1,17 @@
+sudo apt update
+sudo apt install mysql-server
+
+sudo passwd
+su root
+
+sudo service mysql start
+
+mysql
+CREATE USER 'userrr'@'%' IDENTIFIED BY 'pwww';
+GRANT ALL PRIVILEGES ON *.* TO 'userrr'@'%' WITH GRANT OPTION;
+FLUSH PRIVILEGES;
+exit
+
+cd src
+javac Main.java
+java -cp ./mysql-connector-j-8.0.32.jar:. Main
