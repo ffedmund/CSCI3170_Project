@@ -561,6 +561,10 @@ public class Main {
                         System.out.println("Price or Quanity is less than 0! Please check the file!");
                         return;
                     }
+                    if(authors.indexOf(",") != -1 ){
+                        System.out.println("Author name contain (,)! Please check the file!");
+                        return;
+                    }
                     if (isbn.matches(isbnPattern)){
                         String query = "INSERT INTO Book (ISBN, Title, Authors, Price, InventoryQuantity) VALUES ('" + isbn + "', '" + title + "', '" + authors + "', " + price + ", " + quantity + ")";
                         stmt.executeUpdate(query);
