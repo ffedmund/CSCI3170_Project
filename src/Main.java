@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.ArrayList;
 import java.io.Console;
 import java.sql.*;
+import java.io.File;
 
 public class Main {
     // global var
@@ -515,6 +516,106 @@ public class Main {
         return 0;
     }
 
+    static void readFile(){
+        Connection conn = null;
+        Statement stmt = null;
+
+        try {
+            // Connect to the database
+            Class.forName("com.mysql.cj.jdbc.Driver");
+            conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/your_database_name", "your_username", "your_password");
+
+            // Create a statement
+            stmt = conn.createStatement();
+            
+            //Get the path of file
+            Scanner inputScanner = new Scanner(System.in);
+            System.out.println("Enter your file path name(press Enter): [XXXXX.txt]");
+            String filePath = inputScanner.nextLine();
+            inputScanner.close();
+
+            // Read data from file
+            String isbnPattern = "\\d-\\d{4}-\\d{4}-\\d";
+            String datePattern = "\\d{4}-\\d{2}-\\d{2}";
+            File file = new File(filePath);
+            Scanner scanner = new Scanner(file);
+            while (scanner.hasNextLine()) {
+                String line = scanner.nextLine();
+                String[] parts = line.split(", ");
+
+                // Insert data into the appropriate table
+                if (parts.length == 6) {
+                    // Book table
+                    String isbn = parts[0];
+                    String title = parts[1];
+                    String authors = parts[2];
+                    int price, quantity;
+                    try{
+                        price = Integer.parseInt(parts[3]);
+                        quantity = Integer.parseInt(parts[4]);
+                    }catch(NumberFormatException e){
+                        System.out.println("price or quantity is not an integer! Please check the file!");
+                        return;
+                    }
+                    if(price <= 0 || quantity <=0){
+                        System.out.println("Price or Quanity is less than 0! Please check the file!");
+                        return;
+                    }
+                    if (isbn.matches(isbnPattern)){
+                        String query = "INSERT INTO Book (ISBN, Title, Authors, Price, InventoryQuantity) VALUES ('" + isbn + "', '" + title + "', '" + authors + "', " + price + ", " + quantity + ")";
+                        stmt.executeUpdate(query);
+                    }else{
+                        System.out.println("ISBN is in wrong format (X-XXXX-XXXX-X)! Please check the file!");
+                        return;
+                    }
+                } else if (parts.length == 3) {
+                    // Customer table
+                    String uid = parts[0];
+                    String name = parts[1];
+                    String address = parts[2];
+                    String query = "INSERT INTO Customer (UID, Name, Address) VALUES ('" + uid + "', '" + name + "', '" + address + "')";
+                    stmt.executeUpdate(query);
+                } else if (parts.length == 6) {
+                    // Ordering table
+                    String oid = parts[0];
+                    String uid = parts[1];
+                    String isbn = parts[2];
+                    String date = parts[3];
+                    int quantity = Integer.parseInt(parts[4]);
+                    String status = parts[5];
+                    if(oid.length() != 8){
+                        System.out.println("OID is in wrong format! Please check the file!");
+                        return;
+                    }
+                    if(isbn.matches(isbnPattern) && date.matches(datePattern)){
+                        String query = "INSERT INTO Ordering (OID, UID, OrderISBN, OrderDate, OrderQuantity, ShippingStatus) VALUES ('" + oid + "', '" + uid + "', '" + isbn + "', '" + date + "', " + quantity + ", '" + status + "')";
+                        stmt.executeUpdate(query);
+                    }else{
+                        System.out.println("ISBN(X-XXXX-XXXX-X) or DATE(XXXX-XX-XX) is in wrong format! Please check the file!");
+                        return;
+                    }
+                }
+            }
+            scanner.close();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            // Close the statement and connection
+            try {
+                if (stmt != null) {
+                    stmt.close();
+                }
+                if (conn != null) {
+                    conn.close();
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
     public static void main(String[] args){
         int page = 0;
         int error = 0;
@@ -569,7 +670,7 @@ public class Main {
                             connectDatabase();
                             break;
                         case 2: // Load from File
-                            // TODO
+                            readFile();
                             break;
                         case 3: // Delete All Records
                             clrscr();
