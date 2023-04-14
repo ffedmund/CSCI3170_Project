@@ -1,17 +1,21 @@
-sudo apt update
-sudo apt install mysql-server
+sudo su root; 
+apt update; apt -y install mysql-server; service mysql start; mysql; 
+CREATE USER 'userrr'@'%' IDENTIFIED BY 'pwww'; GRANT ALL PRIVILEGES ON *.* TO 'userrr'@'%' WITH GRANT OPTION; FLUSH PRIVILEGES; exit; 
+cd src; javac Main.java;
 
-sudo passwd
-su root
+/**
+ * Place it line by line and wait 
+ * userrr is the username and pwww is the password for mysql, change it if you like
+ * 
+ * to use mysql, type:
+ *     mysql -u userrr -p
+ *     (enter pwww)
+ * 
+ * to add data in the database, type:
+ *     uses BOOKORDERING;
+ * before to use the database for the program
+ * 
+ * the following is the command to run the program Main:
+ */
 
-sudo service mysql start
-
-mysql
-CREATE USER 'userrr'@'%' IDENTIFIED BY 'pwww';
-GRANT ALL PRIVILEGES ON *.* TO 'userrr'@'%' WITH GRANT OPTION;
-FLUSH PRIVILEGES;
-exit
-
-cd src
-javac Main.java
 java -cp ./mysql-connector-j-8.0.32.jar:. Main
