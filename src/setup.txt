@@ -1,4 +1,4 @@
-sudo su root; 
+sudo su; 
 apt update; apt -y install mysql-server; service mysql start; mysql; 
 CREATE USER 'userrr'@'%' IDENTIFIED BY 'pwww'; GRANT ALL PRIVILEGES ON *.* TO 'userrr'@'%' WITH GRANT OPTION; FLUSH PRIVILEGES; exit; 
 cd src; javac Main.java;
@@ -12,7 +12,7 @@ cd src; javac Main.java;
  *     (enter pwww)
  * 
  * to add data in the database, type:
- *     uses BOOKORDERING;
+ *     use BOOKORDERING;
  * before to use the database for the program
  * 
  * the following is the command to run the program Main:
