@@ -532,7 +532,7 @@ public class Main {
                 
                 // Get the path of file
                 Scanner inputScanner = new Scanner(System.in);
-                System.out.println("Enter your file path name(Empty to exit): [.txt / .csv]");
+                System.out.println("Enter your file path name(Empty to exit): [XXXXX.txt]");
                 String filePath = inputScanner.nextLine();
 
                 if(filePath.equals("")){
