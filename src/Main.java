@@ -532,7 +532,7 @@ public class Main {
                 
                 // Get the path of file
                 Scanner inputScanner = new Scanner(System.in);
-                System.out.println("Enter your file path name(Empty to exit): [XXXXX.txt]");
+                System.out.println("Enter your file path name(Empty to exit): [.txt / .csv]");
                 String filePath = inputScanner.nextLine();
 
                 if(filePath.equals("")){
@@ -550,7 +550,34 @@ public class Main {
                 boolean finishRead = false;
                 while (scanner.hasNextLine()) {
                     String line = scanner.nextLine();
-                    String[] parts = line.split(", ");
+                    ArrayList<String> al = new ArrayList<String>();
+        
+                    StringBuilder sb = new StringBuilder();
+                    boolean inQuotes = false;
+
+                    for (int i = 0; i < line.length(); i++) {
+                        char c = line.charAt(i);
+                        if (c == ',') {
+                            if (!inQuotes) {
+                                al.add(sb.toString());
+                                sb = new StringBuilder();
+                            } else {
+                                sb.append(c);
+                            }
+                        } else if (c == '"') {
+                            if (i < line.length() - 1 && line.charAt(i + 1) == '"') {
+                                sb.append(c);
+                                i++;
+                            } else {
+                                inQuotes = !inQuotes;
+                            }
+                        } else {
+                            sb.append(c);
+                        }
+                    }
+                    al.add(sb.toString());
+
+                    String[] parts = al.toArray(new String[al.size()]);
 
                     // if not created the temp table for testing error
                     if(createdTable.equals("") && (parts.length == 5||parts.length == 3||parts.length == 6)){    
