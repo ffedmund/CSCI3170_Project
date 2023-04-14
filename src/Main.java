@@ -532,7 +532,7 @@ public class Main {
                 
                 // Get the path of file
                 Scanner inputScanner = new Scanner(System.in);
-                System.out.println("Enter your file path name(Empty to exit): [XXXXX.txt]");
+                System.out.println("Enter your file path name(Empty to exit): [.txt / .csv]");
                 String filePath = inputScanner.nextLine();
 
                 if(filePath.equals("")){
@@ -550,7 +550,7 @@ public class Main {
                 boolean finishRead = false;
                 while (scanner.hasNextLine()) {
                     String line = scanner.nextLine();
-                    String[] parts = line.split(", ");
+                    String[] parts = line.split(",");
 
                     // if not created the temp table for testing error
                     if(createdTable.equals("") && (parts.length == 5||parts.length == 3||parts.length == 6)){    
@@ -579,8 +579,8 @@ public class Main {
                         if(isbn.matches("\\d+") && isbn.length()==10)
                             isbn = isbn.substring(0, 1) + "-" + isbn.substring(1, 5) + "-" + 
                                     isbn.substring(5, 9) + "-" + isbn.substring(9);
-                        String title = parts[1];
-                        String authors = parts[2];
+                        String title = parts[1].trim();
+                        String authors = parts[2].trim();
                         int price, quantity;
                         int error = 0;
                         try{
@@ -629,8 +629,8 @@ public class Main {
                     } else if (parts.length == 3) {
                         // Customer table
                         String uid = parts[0].trim();
-                        String name = parts[1];
-                        String address = parts[2];
+                        String name = parts[1].trim();
+                        String address = parts[2].trim();
                         int error = 0;
                         try{
                             error = 1;
