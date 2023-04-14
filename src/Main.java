@@ -4,15 +4,19 @@ import java.time.format.DateTimeFormatter;
 import java.util.Scanner;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Arrays;
 import java.util.ArrayList;
 import java.io.Console;
 import java.sql.*;
 import java.io.File;
+import java.io.FileNotFoundException;
 
 public class Main {
     // global var
     static boolean connected = false;
     static Connection conn = null;
+    static String newName;  // temp table name for testing
+    static boolean newNameOK;
     static final String[] tableName = {"Book", "Customer", "Ordering"};
     static final HashMap<String, String> tableStruct = new HashMap<String, String>();
     static {
@@ -212,10 +216,8 @@ public class Main {
 
         // in order to check the schema of the existing table,
         // a new table name is randomly generated for comparison
-        String newName;
-        boolean newNameOK;
         int failcount = 0;  // count the times of generated a repeated name
-        do{
+        while(!newNameOK){  // keep try generating until new name ok
             newNameOK = true;
             newName = "temp";
             for(int i = 0; i<40; i++)   // avoid by adding random char
@@ -229,14 +231,14 @@ public class Main {
                 conn = oldConn; // roll back the change
                 newNameOK = false;
                 failcount++;
-            }   
+            }
 
             if(failcount > 1000000){    // stop generation (and give up) if the name always exist in the database
                 conn = oldConn; // roll back the change
                 showMessage("\nError: Please try another database");
                 return;
             }
-        }while(!newNameOK); // keep generating until new name ok
+        }
         
         // check if the table exist, exist->check if the schema correct, not exist->create table
         for(String tname: tableName){
@@ -517,113 +519,257 @@ public class Main {
     }
 
     static void readFile(){
-        Connection conn = null;
-        Statement stmt = null;
-
         while(true){
+            clrscr();
             try {
-                // Connect to the database
-                Class.forName("com.mysql.cj.jdbc.Driver");
-                conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/your_database_name", "your_username", "your_password");
-
                 // Create a statement
-                stmt = conn.createStatement();
+                Statement stmt = conn.createStatement();
                 
-                //Get the path of file
+                // Get the path of file
                 Scanner inputScanner = new Scanner(System.in);
-                System.out.println("Enter your file path name(press Enter 2 to exit): [XXXXX.txt]");
+                System.out.println("Enter your file path name(Empty to exit): [XXXXX.txt]");
                 String filePath = inputScanner.nextLine();
-                inputScanner.close();
 
-                if(filePath == "2"){
+                if(filePath.equals("")){
                     break;
                 }
 
                 // Read data from file
                 String isbnPattern = "\\d-\\d{4}-\\d{4}-\\d";
                 String datePattern = "\\d{4}-\\d{2}-\\d{2}";
+                String oidPattern = "\\d{8}";
                 File file = new File(filePath);
                 Scanner scanner = new Scanner(file);
+
+                String createdTable = "";
+                boolean finishRead = false;
                 while (scanner.hasNextLine()) {
                     String line = scanner.nextLine();
                     String[] parts = line.split(", ");
 
-                    // Insert data into the appropriate table
-                    if (parts.length == 6) {
+                    // if not created the temp table for testing error
+                    if(createdTable.equals("") && (parts.length == 5||parts.length == 3||parts.length == 6)){    
+                        try{    // create a temp table to test error
+                            if (parts.length == 5) {
+                                createdTable = "Book";
+                            } else if (parts.length == 3) {
+                                createdTable = "Customer";
+                            } else if (parts.length == 6) {
+                                createdTable = "Ordering";
+                            }
+                            Statement stmt2 = conn.createStatement();
+                            stmt2.executeUpdate("CREATE TABLE " + newName + " " + tableStruct.get(createdTable));
+                        }catch(Exception x){    // unexceped exception catched, disconnect to database and force user to reconnect to solve the problem
+                            showMessage("\nUnknown Error while connecting to database\n--- Disconnected to database ---");
+                            stmt.executeUpdate("DROP TABLE " + newName);
+                            connected = false;
+                            return;
+                        }
+                    }
+
+                    // Insert data into the table
+                    if (parts.length == 5) {
                         // Book table
-                        String isbn = parts[0];
+                        String isbn = parts[0].trim();
+                        if(isbn.matches("\\d+") && isbn.length()==10)
+                            isbn = isbn.substring(0, 1) + "-" + isbn.substring(1, 5) + "-" + 
+                                    isbn.substring(5, 9) + "-" + isbn.substring(9);
                         String title = parts[1];
                         String authors = parts[2];
                         int price, quantity;
+                        int error = 0;
                         try{
-                            price = Integer.parseInt(parts[3]);
-                            quantity = Integer.parseInt(parts[4]);
-                        }catch(NumberFormatException e){
-                            System.out.println("price or quantity is not an integer! Please check the file!");
-                            return;
-                        }
-                        if(price <= 0 || quantity <=0){
-                            System.out.println("Price or Quanity is less than 0! Please check the file!");
-                            return;
-                        }
-                        if(authors.indexOf(",") != -1 ){
-                            System.out.println("Author name contain (,)! Please check the file!");
-                            return;
-                        }
-                        if (isbn.matches(isbnPattern)){
-                            String query = "INSERT INTO Book (ISBN, Title, Authors, Price, InventoryQuantity) VALUES ('" + isbn + "', '" + title + "', '" + authors + "', " + price + ", " + quantity + ")";
+                            error = 1;
+                            price = Integer.parseInt(parts[3].trim());
+                            quantity = Integer.parseInt(parts[4].trim());
+
+                            error = 2;
+                            if(price <= 0 || quantity <=0)
+                                throw new Exception();
+
+                            error = 3;
+                            if (!isbn.matches(isbnPattern))
+                                throw new Exception();
+
+                            error = 4;
+                            String query = "INSERT INTO " + newName + " (ISBN, Title, Authors, Price, InventoryQuantity) VALUES ('" + isbn + "', '" + title + "', '" + authors + "', " + price + ", " + quantity + ")";
                             stmt.executeUpdate(query);
-                        }else{
-                            System.out.println("ISBN is in wrong format (X-XXXX-XXXX-X)! Please check the file!");
-                            return;
+                        }catch(Exception e){
+                            System.out.println("\nError occurred in record:");
+                            System.out.println("ISBN: " + parts[0]);
+                            System.out.println("Title: " + parts[1]);
+                            System.out.println("Authors: " + parts[2]);
+                            System.out.println("Price: " + parts[3]);
+                            System.out.println("InventoryQuantity: " + parts[4]);
+                            switch(error){
+                                case 1:
+                                    showMessage("\nPrice or Quantity is not an integer! Please check the file!");
+                                    break;
+                                case 2:
+                                    showMessage("\nPrice or Quanity is less than 0! Please check the file!");
+                                    break;
+                                case 3:
+                                    showMessage("\nISBN is in wrong format (X-XXXX-XXXX-X OR XXXXXXXXXX)! Please check the file!");
+                                    break;
+                                case 4:
+                                    showMessage("\nFailure while inserting to database! Please check the file!");
+                                    break;
+                            }
+                            throw new Exception("");
                         }
+                        // if(authors.indexOf(",") != -1 ){
+                        //     System.out.println("Author name contain (,)! Please check the file!");
+                        //     return;
+                        // }
                     } else if (parts.length == 3) {
                         // Customer table
-                        String uid = parts[0];
+                        String uid = parts[0].trim();
                         String name = parts[1];
                         String address = parts[2];
-                        String query = "INSERT INTO Customer (UID, Name, Address) VALUES ('" + uid + "', '" + name + "', '" + address + "')";
-                        stmt.executeUpdate(query);
+                        int error = 0;
+                        try{
+                            error = 1;
+                            String query = "INSERT INTO " + newName + " (UID, Name, Address) VALUES ('" + uid + "', '" + name + "', '" + address + "')";
+                            stmt.executeUpdate(query);
+                        }catch(Exception e){
+                            System.out.println("\nError occurred in record:");
+                            System.out.println("UID: " + parts[0]);
+                            System.out.println("Name: " + parts[1]);
+                            System.out.println("Address: " + parts[2]);
+                            switch(error){
+                                case 1:
+                                    showMessage("\nFailure while inserting to database! Please check the file!");
+                                    break;
+                            }
+                            throw new Exception("");
+                        }
                     } else if (parts.length == 6) {
                         // Ordering table
-                        String oid = parts[0];
-                        String uid = parts[1];
-                        String isbn = parts[2];
-                        String date = parts[3];
-                        int quantity = Integer.parseInt(parts[4]);
-                        String status = parts[5];
-                        if(oid.length() != 8){
-                            System.out.println("OID is in wrong format! Please check the file!");
-                            return;
-                        }
-                        if(isbn.matches(isbnPattern) && date.matches(datePattern)){
-                            String query = "INSERT INTO Ordering (OID, UID, OrderISBN, OrderDate, OrderQuantity, ShippingStatus) VALUES ('" + oid + "', '" + uid + "', '" + isbn + "', '" + date + "', " + quantity + ", '" + status + "')";
+                        String oid = parts[0].trim();
+                        String uid = parts[1].trim();
+                        String isbn = parts[2].trim();
+                        if(isbn.matches("\\d+") && isbn.length()==10)
+                            isbn = isbn.substring(0, 1) + "-" + isbn.substring(1, 5) + "-" + 
+                                    isbn.substring(5, 9) + "-" + isbn.substring(9);
+                        String date = parts[3].trim();
+                        if(date.matches("\\d+") && date.length()==8)
+                            date = date.substring(0, 4) + "-" + date.substring(4, 6) + "-" + date.substring(6);
+                        int quantity;
+                        String status = parts[5].trim();
+                        int error = 0;
+                        try{
+                            error = 1;
+                            quantity = Integer.parseInt(parts[4].trim());
+
+                            error = 2;
+                            if(quantity <=0)
+                                throw new Exception();
+
+                            error = 3;
+                            if (!isbn.matches(isbnPattern))
+                                throw new Exception();
+
+                            error = 4;
+                            if (!date.matches(datePattern))
+                                throw new Exception();
+
+                            error = 5;
+                            if (!oid.matches(oidPattern))
+                                throw new Exception();
+                            
+                            error = 6;
+                            List<String> stus = Arrays.asList("ordered", "shipped", "received");
+                            if(!stus.contains(status))
+                                throw new Exception();
+
+                            error = 7;
+                            String query = "INSERT INTO " + newName + " (OID, UID, OrderISBN, OrderDate, OrderQuantity, ShippingStatus) VALUES ('" + oid + "', '" + uid + "', '" + isbn + "', '" + date + "', " + quantity + ", '" + status + "')";
                             stmt.executeUpdate(query);
-                        }else{
-                            System.out.println("ISBN(X-XXXX-XXXX-X) or DATE(XXXX-XX-XX) is in wrong format! Please check the file!");
-                            return;
+                        }catch(Exception e){
+                            System.out.println("\nError occurred in record:");
+                            System.out.println("OID: " + parts[0]);
+                            System.out.println("UID: " + parts[1]);
+                            System.out.println("OrderISBN: " + parts[2]);
+                            System.out.println("OrderDate: " + parts[3]);
+                            System.out.println("OrderQuantity: " + parts[4]);
+                            System.out.println("ShippingStatus: " + parts[5]);
+                            switch(error){
+                                case 1:
+                                    showMessage("\nQuantity is not an integer! Please check the file!");
+                                    break;
+                                case 2:
+                                    showMessage("\nQuanity is less than 0! Please check the file!");
+                                    break;
+                                case 3:
+                                    showMessage("\nISBN is in wrong format (X-XXXX-XXXX-X OR XXXXXXXXXX)! Please check the file!");
+                                    break;
+                                case 4:
+                                    showMessage("\nDATE(YYYY-MM-DD OR YYYYMMDD) is in wrong format! Please check the file!");
+                                    break;
+                                case 5:
+                                    showMessage("\nOID(XXXXXXXX) is in wrong format! Please check the file!");
+                                    break;
+                                case 6:
+                                    showMessage("\nUnknow ShippingStatus! Please check the file!");
+                                    break;
+                                case 7:
+                                    System.out.println("hi");
+                                    System.out.println(e.getMessage());
+                                    showMessage("\nFailure while inserting to database! Please check the file!\n(UID or ISBN may not exist)");
+                                    break;
+                            }
+                            throw new Exception("");
+                        }
+                    } else {
+                        showMessage("\nFile wrong format! Please check the file!");
+                        throw new Exception("");
+                    }
+                }   // end read lines loop
+                scanner.close();
+
+                // write back from temp to correct one
+                try{
+                    conn.setAutoCommit(false);
+                    Statement stmt2 = conn.createStatement();
+                    ResultSet rs = stmt2.executeQuery("SELECT * FROM " + newName);
+                    while(rs.next()){
+                        if (createdTable.equals("Book")) {
+                            stmt.executeUpdate("INSERT INTO " + createdTable + " VALUES ('" + rs.getString(1) + "', '" + rs.getString(2) + "', '" + rs.getString(3) + "', " + rs.getString(4) + ", " + rs.getString(5) + ")");
+                        } else if (createdTable.equals("Customer")) {
+                            stmt.executeUpdate("INSERT INTO " + createdTable + " VALUES ('" + rs.getString(1) + "', '" + rs.getString(2) + "', '" + rs.getString(3) + "')");
+                        } else if (createdTable.equals("Ordering")) {
+                            stmt.executeUpdate("INSERT INTO " + createdTable + " VALUES ('" + rs.getString(1) + "', '" + rs.getString(2) + "', '" + rs.getString(3) + "', '" + rs.getString(4) + "', " + rs.getString(5) + ", '" + rs.getString(6) + "')");
                         }
                     }
+                    conn.commit();
+                    conn.setAutoCommit(true);
+                    finishRead = true;
+                }catch(Exception e){
+                    showMessage("\n Records Duplicated");
+                    conn.rollback();
+                    conn.setAutoCommit(true);
                 }
-                scanner.close();
-            } catch (SQLException e) {
+                if(finishRead){
+                    showMessage("\nInput success!");
+                }
+            }catch (FileNotFoundException e){
+                showMessage("\nFile not found");
+            }catch (SQLException e) {
                 e.printStackTrace();
+                showMessage("");
             } catch (Exception e) {
-                e.printStackTrace();
-            } finally {
-                // Close the statement and connection
-                try {
-                    if (stmt != null) {
-                        stmt.close();
-                    }
-                    if (conn != null) {
-                        conn.close();
-                    }
-                } catch (SQLException e) {
+                if (!e.getMessage().equals("")){
                     e.printStackTrace();
+                    showMessage("");
+                }
+            }finally{
+                try{    // drop temp table after use 
+                    Statement stmt2 = conn.createStatement();
+                    stmt2.executeUpdate("DROP TABLE " + newName);
+                }catch(Exception e){
                 }
             }
-        }
+        }   // end read file loop
     }
 
     public static void main(String[] args){
