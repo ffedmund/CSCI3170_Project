@@ -90,8 +90,8 @@ public class Main {
      * to ensure message are shown before flushed away
      */
     static void showMessage(String s){
-        System.err.println(s);
-        System.err.println("(Press Enter to continue)");
+        System.out.println(s);
+        System.out.println("(Press Enter to continue)");
         Scanner myScanner = new Scanner(System.in);
         myScanner.nextLine();
     }
@@ -117,7 +117,7 @@ public class Main {
                     rs.next();
                     count = rs.getInt(1);
                 }catch(Exception x){
-                    System.err.print("Error: '" + tableName[i] + "' ");
+                    System.out.print("Error: '" + tableName[i] + "' ");
                 }
                 if(count != -1){
                     switch(i){
@@ -269,7 +269,7 @@ public class Main {
                         throw new Exception();
                 }catch(Exception y){    // connection fail due to (the database exist a table with different schema) OR (any other exception got)
                     conn = oldConn; // roll back the change
-                    System.err.println("\nError: Existing table not match \nPlease try another database or delete the existing table '" + tname + "'");
+                    System.out.println("\nError: Existing table not match \nPlease try another database or delete the existing table '" + tname + "'");
                     return;
                 }
             }
@@ -515,7 +515,7 @@ public class Main {
             }
         }catch(Exception x){    // exception not expected (print out for debug)
             x.printStackTrace();
-            System.err.println(x);
+            System.out.println(x);
             Scanner myScanner = new Scanner(System.in);
             myScanner.nextLine();
             return 1;
