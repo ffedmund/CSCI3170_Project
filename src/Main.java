@@ -337,14 +337,19 @@ public class Main {
                 for(int w: colW)
                     sum += w;
                 int min = 5;
-                while(sum+columnsNumber+1>80){  // reduce each colW by 1 if the total print width > 80
+                while(sum+columnsNumber+1>80){  // reduce max colW by 1 if the total print width > 80
                     boolean sumChanged = false;
                     // decrease while keeping a min width
-                    for(int i=0; i<columnsNumber; i++)
-                        if(colW[i]>min){
-                            colW[i]--;
-                            sumChanged = true;
+                    int maxindex = 0;
+                    for(int i=1; i<columnsNumber; i++){
+                        if(colW[i]>colW[maxindex]){
+                            maxindex = i;
                         }
+                    }
+                    if(colW[maxindex]>min){
+                        colW[maxindex]--;
+                        sumChanged = true;
+                    }
                     
                     // if impossible even width of each column = 1, give up to keep the total width in 80
                     if(!sumChanged){    
@@ -683,6 +688,38 @@ public class Main {
                                 throw new Exception();
 
                             error = 7;
+                            try{    // check isbn
+                                Statement stmt3 = conn.createStatement();
+                                ResultSet rs3 = stmt3.executeQuery("SELECT COUNT(*) FROM Book WHERE ISBN = '" + isbn + "'");
+                                rs3.next();
+                                if(rs3.getInt(1)>0)
+                                    error = 0;
+                            }catch(Exception e){
+                                e.printStackTrace();
+                                showMessage("");
+                            }finally{
+                                if(error != 0){
+                                    throw new Exception();
+                                }
+                            }
+
+                            error = 8;
+                            try{    // check uid
+                                Statement stmt3 = conn.createStatement();
+                                ResultSet rs3 = stmt3.executeQuery("SELECT COUNT(*) FROM Customer WHERE UID = '" + uid + "'");
+                                rs3.next();
+                                if(rs3.getInt(1)>0)
+                                    error = 0;
+                            }catch(Exception e){
+                                e.printStackTrace();
+                                showMessage("");
+                            }finally{
+                                if(error != 0){
+                                    throw new Exception();
+                                }
+                            }
+
+                            error = 9;
                             String query = "INSERT INTO " + newName + " (OID, UID, OrderISBN, OrderDate, OrderQuantity, ShippingStatus) VALUES ('" + oid + "', '" + uid + "', '" + isbn + "', '" + date + "', " + quantity + ", '" + status + "')";
                             stmt.executeUpdate(query);
                         }catch(Exception e){
@@ -713,9 +750,15 @@ public class Main {
                                     showMessage("\nUnknow ShippingStatus! Please check the file!");
                                     break;
                                 case 7:
+                                    showMessage("\nISBN not exist in Book record! Please check the file!");
+                                    break;
+                                case 8:
+                                    showMessage("\nUID not exist in Customer record! Please check the file!");
+                                    break;
+                                case 9:
                                     System.out.println("hi");
                                     System.out.println(e.getMessage());
-                                    showMessage("\nFailure while inserting to database! Please check the file!\n(UID or ISBN may not exist)");
+                                    showMessage("\nFailure while inserting to database! Please check the file!\n(UID and OID may not match with previous record)");
                                     break;
                             }
                             throw new Exception("");
@@ -745,7 +788,7 @@ public class Main {
                     conn.setAutoCommit(true);
                     finishRead = true;
                 }catch(Exception e){
-                    showMessage("\n Records Duplicated");
+                    showMessage("\nSome records Duplicated");
                     conn.rollback();
                     conn.setAutoCommit(true);
                 }
