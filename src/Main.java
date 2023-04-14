@@ -550,7 +550,7 @@ public class Main {
                 boolean finishRead = false;
                 while (scanner.hasNextLine()) {
                     String line = scanner.nextLine();
-                    String[] parts = line.split(",");
+                    String[] parts = line.split(", ");
 
                     // if not created the temp table for testing error
                     if(createdTable.equals("") && (parts.length == 5||parts.length == 3||parts.length == 6)){    
