@@ -11,9 +11,9 @@ cd src; javac Main.java;
  *     mysql -u userrr -p
  *     (enter pwww)
  * 
- * to add data in the database, type:
+ * to add data in the database, run the program once and type:
  *     use BOOKORDERING;
- * before to use the database for the program
+ * to use the database for the program
  * 
  * the following is the command to run the program Main:
  */
